@@ -1,0 +1,441 @@
+---
+title: "6_PCA_gene_centered"
+output: html_document
+date: "2023-02-26"
+---
+# 1. Loading Packages and Functions
+```{r}
+library(PLIER)
+library(sjstats)
+library(tidyverse)
+library(devtools)
+library(cowplot)
+library(gridExtra)
+library(grid)
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Data Import
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+# 3. Data Processing
+```{r}
+# Here we use the function lapply to standardize each dataset (gene-wise) using the rowNorm function from the PLIER package.
+AF_Meta = lapply(AF_Meta, function(x){
+  x[["GEX_norm"]] = PLIER::rowNorm(x[["GEX"]]) #standarization of each data set (gene wise)
+  return(x)
+})
+
+meta_targets = get_tibble_union(AF_Meta,"TARGETS") %>% 
+  dplyr::select(sample, condition, ExpID) %>% 
+  mutate(grl_id = paste(sample,ExpID,sep = "_"))
+
+
+meta_targets = meta_targets %>% mutate(Tech = case_when(ExpID == "Hsu_2018" | ExpID == "Thomas_2019" | ExpID == "Sun_2021" | ExpID == "Herrera_Rivero_2022" | ExpID == "Santos_2020" | ExpID == "Zhu_2020"  ~ "RNA-Seq", TRUE ~ "microarray"))
+```
+
+```{r}
+sample_information <- read.delim("./sample_information.txt")
+
+# Convert character columns to numeric
+sample_information$mean_age_af <- as.numeric(sample_information$mean_age_af)
+sample_information$mean_age_sr <- as.numeric(sample_information$mean_age_sr)
+sample_information$mean_lvef_af <- as.numeric(sample_information$mean_lvef_af)
+sample_information$mean_lvef_sr <- as.numeric(sample_information$mean_lvef_sr)
+
+# Calculate proportion of males in AF and SR groups
+sample_information$prop_males_af <- sample_information$males_af / sample_information$total_af
+sample_information$prop_males_sr <- sample_information$males_sr / sample_information$total_sr
+
+# Select only the necessary columns from sample_information
+sample_information_subset <- sample_information %>% select(First.author.name, mean_age_af, mean_age_sr, mean_lvef_af, mean_lvef_sr, prop_males_af, prop_males_sr)
+
+# Merge this with meta_targets
+merged_df <- meta_targets %>% 
+  left_join(sample_information_subset, by = c("ExpID" = "First.author.name"))
+
+merged_df <- merged_df %>%
+  mutate(
+    mean_age = ifelse(condition == "SR", mean_age_sr, mean_age_af),
+    mean_lvef = ifelse(condition == "SR", mean_lvef_sr, mean_lvef_af),
+    prop_males = ifelse(condition == "SR", prop_males_sr, prop_males_af)
+  ) %>% select(c(ExpID, grl_id, condition, sample, Tech, mean_age, mean_lvef, prop_males))
+```
+
+
+```{r}
+# We then create a unified dataset that includes all the gene expression data from the different studies.
+meta_gex_scale = get_complete_gex_AF(meta_list = AF_Meta,
+                                  complete_targets = meta_targets,
+                                  gex_key = "GEX_norm")
+```
+
+# 4. PCA on complete matrix
+```{r}
+# We will perform PCA on the standardized combined dataset.
+meta_gex_naomit_scale = meta_gex_scale[rowSums(is.na(meta_gex_scale))==0,]
+pca_meta_scale = prcomp(t(meta_gex_naomit_scale[,meta_targets$grl_id]),
+                        center = T,scale. = T)
+pca_meta_sum_scale = summary(pca_meta_scale)
+pca_plot_df_scale = meta_targets %>% mutate("PC1" = pca_meta_scale$x[,1],
+                                            "PC2" = pca_meta_scale$x[,2])
+
+pca_meta_sum_scale[["plot_df"]] = pca_plot_df_scale
+
+# Here we have removed rows with NA values and created a summary object that includes information about the PCA analysis. These results will be next saved as an RDS object for later use.
+saveRDS(pca_meta_sum_scale, 
+        file = "data/figure_objects/gcentered_PCA_sum.rds")
+
+```
+
+# 5. Association of PCs with AF and Study
+```{r}
+# We use an ANOVA test to assess the association of the principal components with atrial fibrillation. 
+pca_anova_res = apply((t(pca_meta_scale$x)), 1, function(x, targets){
+  pc_i = x
+  #factor_a_vect = factor(targets[["ExpID"]])
+  factor_a_vect = factor(targets[["condition"]])
+  gene_aov = aov(pc_i ~ factor_a_vect)
+  aov_stats = anova_stats(gene_aov) 
+  
+},targets = meta_targets)  %>% bind_rows(.id = "PC") %>% as_tibble() %>% 
+  group_by(PC) %>% gather(stats,value,-(PC:term))  %>% spread(term,value) %>%
+  ungroup()
+
+pcs_af = pca_anova_res %>% filter(stats == "p.value" & factor_a_vect < 0.05)
+
+pcs_af = pca_meta_sum_scale$importance[,pcs_af$PC]
+
+total_prop_af = sum(pcs_af[2,])
+
+# Here the proportion of the variance explained by the principal components associated with atrial fibrillation is printed out.
+print(total_prop_af)
+```
+
+```{r}
+# We use an ANOVA test to assess the association of the principal components with the technology used.
+pca_anova_res = apply((t(pca_meta_scale$x)), 1, function(x, targets){
+  pc_i = x
+  factor_a_vect = factor(targets[["Tech"]])
+  gene_aov = aov(pc_i ~ factor_a_vect)
+  aov_stats = anova_stats(gene_aov) 
+  
+},targets = meta_targets)  %>% bind_rows(.id = "PC") %>% as_tibble() %>% 
+  group_by(PC) %>% gather(stats,value,-(PC:term))  %>% spread(term,value) %>%
+  ungroup()
+
+pcs_tech = pca_anova_res %>% filter(stats == "p.value" & factor_a_vect < 0.05)
+
+pcs_tech = pca_meta_sum_scale$importance[,pcs_tech$PC]
+
+total_prop_tech = sum(pcs_tech[2,])
+
+# Here the proportion of the variance explained by the principal components associated with technology is printed out.
+print(total_prop_tech)
+```
+
+```{r}
+# We use an ANOVA test to assess the association of the principal components with the studies.
+pca_anova_res = apply((t(pca_meta_scale$x)), 1, function(x, targets){
+  pc_i = x
+  factor_a_vect = factor(targets[["ExpID"]])
+  gene_aov = aov(pc_i ~ factor_a_vect)
+  aov_stats = anova_stats(gene_aov) 
+  
+},targets = meta_targets)  %>% bind_rows(.id = "PC") %>% as_tibble() %>% 
+  group_by(PC) %>% gather(stats,value,-(PC:term))  %>% spread(term,value) %>%
+  ungroup()
+
+pcs_study = pca_anova_res %>% filter(stats == "p.value" & factor_a_vect < 0.05)
+
+pcs_study = pca_meta_sum_scale$importance[,pcs_study$PC]
+
+total_prop_study = sum(pcs_study[2,])
+
+print(total_prop_study)
+```
+
+```{r}
+# We use linear regression to assess the association of the principal components with male proportion difference.
+pca_lm_res = apply((pca_meta_scale$x), 2, function(x, targets){
+  pc_i = x
+  prop_males_vect = targets[["prop_males"]]
+  gene_lm = lm(pc_i ~ prop_males_vect)
+  lm_stats = summary(gene_lm)
+  
+  # Extract the p-value and R-squared
+  p_value = coef(lm_stats)[2,4]
+  r_squared = lm_stats$r.squared
+  
+  return(c(p_value, r_squared))
+},targets = merged_df) 
+
+# Transpose the dataframe to have one row per PC
+pca_lm_res = t(pca_lm_res)
+
+# Convert to dataframe
+pca_lm_res = as.data.frame(pca_lm_res)
+
+# Name the columns
+names(pca_lm_res) <- c("p.value", "r.squared")
+
+# Filter PCs where p-value is less than some threshold (e.g., 0.05)
+pcs_male = subset(pca_lm_res, p.value < 0.05)
+
+pcs_male <- pcs_male %>% rownames_to_column("PC")
+
+pcs_male = pca_meta_sum_scale$importance[,pcs_male$PC]
+
+total_prop_male = sum(pcs_male[2,])
+
+# Print the cumulative R-squared
+print(total_prop_male)
+```
+
+
+```{r}
+# We use linear regression to assess the association of the principal components with age difference.
+pca_lm_res = apply((pca_meta_scale$x), 2, function(x, targets){
+  pc_i = x
+  mean_age_vect = targets[["mean_age"]]
+  gene_lm = lm(pc_i ~ mean_age_vect)
+  lm_stats = summary(gene_lm)
+  
+  # Extract the p-value and R-squared
+  p_value = coef(lm_stats)[2,4]
+  r_squared = lm_stats$r.squared
+  
+  return(c(p_value, r_squared))
+},targets = merged_df) 
+
+# Transpose the dataframe to have one row per PC
+pca_lm_res = t(pca_lm_res)
+
+# Convert to dataframe
+pca_lm_res = as.data.frame(pca_lm_res)
+
+# Name the columns
+names(pca_lm_res) <- c("p.value", "r.squared")
+
+# Filter PCs where p-value is less than some threshold (e.g., 0.05)
+pcs_age = subset(pca_lm_res, p.value < 0.05)
+
+pcs_age <- pcs_age %>% rownames_to_column("PC")
+
+pcs_age = pca_meta_sum_scale$importance[,pcs_age$PC]
+
+total_prop_age = sum(pcs_age[2,])
+
+# Print the cumulative R-squared
+print(total_prop_age)
+```
+
+
+
+
+```{r}
+# We use linear regression to assess the association of the principal components with LVEF difference.
+pca_lm_res = apply((pca_meta_scale$x), 2, function(x, targets){
+  pc_i = x
+  mean_lvef_vect = targets[["mean_lvef"]]
+  gene_lm = lm(pc_i ~ mean_lvef_vect)
+  lm_stats = summary(gene_lm)
+  
+  # Extract the p-value and R-squared
+  p_value = coef(lm_stats)[2,4]
+  r_squared = lm_stats$r.squared
+  
+  return(c(p_value, r_squared))
+},targets = merged_df) 
+
+# Transpose the dataframe to have one row per PC
+pca_lm_res = t(pca_lm_res)
+
+# Convert to dataframe
+pca_lm_res = as.data.frame(pca_lm_res)
+
+# Name the columns
+names(pca_lm_res) <- c("p.value", "r.squared")
+
+# Filter PCs where p-value is less than some threshold (e.g., 0.05)
+pcs_lvef = subset(pca_lm_res, p.value < 0.05)
+
+pcs_lvef <- pcs_lvef %>% rownames_to_column("PC")
+
+pcs_lvef = pca_meta_sum_scale$importance[,pcs_lvef$PC]
+
+total_prop_lvef = sum(pcs_lvef[2,])
+
+# Print the cumulative R-squared
+print(total_prop_lvef)
+```
+
+
+# 6. Creation of table for plot
+```{r}
+# We create here a summary table that includes the total number of principal components and the cumulative proportion of variance for atrial fibrillation, the study, and tech.
+summary_table = cbind(c("Atrial Fibrillation","Study", "Tech", "Mean Age", "Sex Distribution", "Mean LVEF"),
+                      rbind(c(ncol(pcs_af), total_prop_af),
+                      c(ncol(pcs_study), total_prop_study),
+                      c(ncol(pcs_tech), total_prop_tech),
+                      c(ncol(pcs_age), total_prop_age),
+                      c(ncol(pcs_male), total_prop_male),
+                      c(ncol(pcs_lvef), total_prop_lvef)))
+
+colnames(summary_table) = c("Factor","Total PCs","Cumulative Proportion \n of Variance")
+rownames(summary_table) = c("Atrial Fibrillation", "Study", "Tech", "Mean Age", "Sex Distribution", "Mean LVEF")
+
+print(summary_table)
+
+saveRDS(summary_table, 
+        file = "data/figure_objects/gcentered_PCs_sum.rds")
+
+```
+
+# 7. Gene_centered figures
+
+```{r}
+# Finally, we will generate a plot of the first two principal components of the combined datasets, color-coded by the study and the condition (AF vs. SR). A box plot is also created to show the distribution of the first two principal components for the two conditions.
+
+pca_meta_sum_scale = readRDS(file = "data/figure_objects/gcentered_PCA_sum.rds")
+pca_plot_df_scale = pca_meta_sum_scale$plot_df
+
+pcs_data = readRDS(file = "data/figure_objects/gcentered_PCs_sum.rds")
+```
+
+```{r}
+# Label order
+experiments = names(AF_Meta)
+names(experiments) = experiments
+experiment_size = sort(unlist(lapply(AF_Meta, 
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+
+cbPalette = c("#5e3c58", "#d96459")
+
+pca_plot = ggplot(pca_plot_df_scale, aes(x = PC1, y=PC2, 
+                                         color = factor(ExpID,
+                                                        levels = names(experiment_size)),
+                                         shape = Tech)) + 
+  geom_point() + theme_minimal() +
+  xlab(paste("PC1",
+             as.character(pca_meta_sum_scale$importance[2,1] *100),
+             "%")) +
+  ylab(paste("PC2",
+             as.character(pca_meta_sum_scale$importance[2,2] *100),
+             "%")) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid = element_blank(),
+        plot.margin = unit(c(0.5, 1, 0, 0), 'cm'),
+        legend.position = c(.1, .4)
+        #panel.background = element_rect(fill=NULL, colour='black',
+        #                              size=1)
+        #axis.line.x = element_line(color="black", size = 1),
+        #axis.line.y = element_line(color="black", size = 1)
+  ) + labs(color = "Study")
+
+pca_legend = get_legend(pca_plot)
+pca_plot = pca_plot + theme(legend.position = "none",
+                            #axis.line.x = element_line(color="black", size = 0.3),
+                            #axis.line.y = element_line(color="black", size = 0.3)
+                            panel.background = element_rect(fill=NULL, colour='black',
+                                                            size=.3))
+```
+
+
+```{r}
+box_plot_x = ggplot(pca_plot_df_scale,
+                    aes(x = condition, y = PC1,
+                        color = condition)) + geom_boxplot() +
+  theme_minimal() + coord_flip() +
+  #c(up,right,bottom,left)
+  theme(plot.margin = unit(c(0, 1, 1, 0), 'cm'),
+        #   legend.position = "none",
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title.x = element_text(size=12),
+        legend.position = c(.01, .8)) +
+  ylab(paste("PC1",
+             as.character(pca_meta_sum_scale$importance[2,1] *100),
+             "%")) +
+  scale_colour_manual(values= cbPalette)
+```
+
+```{r}
+hf_legend = get_legend(box_plot_x)
+box_plot_x = box_plot_x + theme(legend.position = "none")
+
+box_plot_y = ggplot(pca_plot_df_scale,
+                    aes(x = condition, y = PC2,
+                        color = condition)) + geom_boxplot() +
+  theme_minimal() +
+  theme(plot.margin = unit(c(0.5, 0, 0, 1), 'cm'),
+        legend.position = "none",
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y = element_text(size=12),
+        axis.title.y = element_text(size=12)) +
+  ylab(paste("PC2",
+             as.character(pca_meta_sum_scale$importance[2,2] *100),
+             "%")) +
+  scale_colour_manual(values= cbPalette)
+
+left_panel = plot_grid(box_plot_y,NULL,align = "v",
+                       ncol = 1,axis = "b", 
+                       rel_heights = c(0.8,0.2))
+
+right_panel = plot_grid(pca_plot,box_plot_x,align = "v",
+                        ncol = 1,axis = "b", 
+                        rel_heights = c(0.8,0.15))
+
+z_trns_plot = plot_grid(left_panel,right_panel, align = "h",rel_widths = c(0.2,.8))
+```
+
+```{r}
+title = ggdraw() + draw_label("First two principal components of gene centered combined data sets", fontface='bold')
+
+plot_grid(title, z_trns_plot, ncol=1, rel_heights=c(0.1, 1)) # rel_heights values control title margins
+
+legends = plot_grid(pca_legend,hf_legend,
+                    ncol=1,rel_heights =c(1,1)) # rel_heights values control title margins
+
+legends = plot_grid(NULL, legends, nrow = 1, rel_widths = c(.2,1))
+
+final_plot = plot_grid(z_trns_plot,legends,
+                       nrow=1, rel_widths=c(1, .25)) # rel_heights values control title margins
+
+plot(final_plot)
+```
+
+```{r}
+mytheme = gridExtra::ttheme_default(
+  core = list(fg_params=list(cex = .8)),
+  colhead = list(fg_params=list(cex = .8)))
+
+pcat_plot = tableGrob(pcs_data, rows = NULL, 
+                      theme = mytheme)
+
+pdf("data/figures/sup/SupplementalFigure8.pdf",
+    width = 15,
+    height = 10)
+
+grid.arrange(final_plot, pcat_plot, ncol = 2, widths = c(3.5,1))
+grid.text(paste0("A"), x = 0.025, y = 0.975, 
+          just = "center", gp = gpar(fontsize = 20, col = "black", fontface="bold"))
+
+dev.off()
+
+saveRDS(AF_Meta, file = "data/AF_Meta.rds")
+```
+
+

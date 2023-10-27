@@ -1,0 +1,3 @@
+"0","covariate_summary = data.frame(t(data.frame(covariates_summary)),"
+"0","                               stringsAsFactors = F)"
+"0","covariate_summary$ID = rownames(covariate_summary)"

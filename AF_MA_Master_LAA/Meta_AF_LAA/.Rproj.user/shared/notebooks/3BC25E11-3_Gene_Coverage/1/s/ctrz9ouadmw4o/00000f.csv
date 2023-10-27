@@ -1,0 +1,5 @@
+"0","plot.coverage.jaccard =  plot_grid(plot.coverage,plot.jaccard,"
+"0","                                   ncol = 2,"
+"0","                                   align = ""h"","
+"0","                                   labels = c(""A"",""B""), "
+"0","                                   rel_widths = c(1,1.2))"

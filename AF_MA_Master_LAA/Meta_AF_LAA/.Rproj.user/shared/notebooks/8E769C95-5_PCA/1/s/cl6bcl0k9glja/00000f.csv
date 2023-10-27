@@ -1,0 +1,72 @@
+"0","library(pwr)"
+"0","library(PLIER)"
+"2","Lade nötiges Paket: RColorBrewer
+"
+"2","Lade nötiges Paket: gplots
+"
+"2","
+Attache Paket: ‘gplots’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:stats’:
+
+    lowess
+
+"
+"2","Lade nötiges Paket: pheatmap
+"
+"2","Lade nötiges Paket: glmnet
+"
+"2","Warnung: Paket ‘glmnet’ wurde unter R Version 4.2.3 erstellt"
+"2","Lade nötiges Paket: Matrix
+"
+"2","
+Attache Paket: ‘Matrix’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:tidyr’:
+
+    expand, pack, unpack
+
+"
+"2","Loaded glmnet 4.1-7
+"
+"2","Lade nötiges Paket: knitr
+"
+"2","Warnung: Paket ‘knitr’ wurde unter R Version 4.2.3 erstellt"
+"2","Lade nötiges Paket: rsvd
+"
+"2","Lade nötiges Paket: qvalue
+"
+"0","library(Rtsne)"
+"0","library(vctrs)"
+"2","Warnung: Paket ‘vctrs’ wurde unter R Version 4.2.3 erstellt"
+"2","
+Attache Paket: ‘vctrs’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    data_frame
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:tibble’:
+
+    data_frame
+
+"
+"0","library(sjstats)"
+"0","library(dplyr)"
+"0","library(tidyverse)"
+"0","library(cowplot)"
+"0","library(rlang)"
+"2","
+Attache Paket: ‘rlang’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:purrr’:
+
+    %@%, flatten, flatten_chr, flatten_dbl, flatten_int, flatten_lgl, flatten_raw, invoke, splice
+
+"
+"0","source(""src/utils_AF_Meta.R"")"

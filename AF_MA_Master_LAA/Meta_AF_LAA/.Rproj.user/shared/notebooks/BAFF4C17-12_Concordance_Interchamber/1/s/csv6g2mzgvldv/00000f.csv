@@ -1,0 +1,15 @@
+"0","RRHO_obj <- RRHO2_initialize(LAA_DE_common, RAA_DE_common, labels = c(""LAA Gene Rank"", ""RAA Gene Rank""), log10.ind=TRUE)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","pdf(""data/figures/sup/SupplementalFigure10.pdf"", width = 14, height = 10)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RRHO2_heatmap(RRHO_obj)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

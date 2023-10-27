@@ -1,0 +1,192 @@
+---
+title: "4_Differential_Expression_Analysis"
+output: html_document
+date: "2023-08-01"
+---
+
+# 1. Loading Packages and Functions
+```{r}
+library(limma)
+library(tidyverse)
+library(cowplot)
+
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Data Import
+```{r}
+#load data
+AF_Meta= readRDS("data/AF_Meta.rds")
+```
+
+# 3. Data Preprocessing
+
+```{r}
+# Here we improve the sample names for two datasets
+
+AF_Meta$Tsai_2016$GEX[1,]
+AF_Meta$Tsai_2016$TARGETS$sample = str_sub(AF_Meta$Tsai_2016$TARGETS$sample, start = 1, end = 10)
+AF_Meta$Tsai_2016$TARGETS$sample
+
+AF_Meta$Deniz_2021$GEX[1,]
+AF_Meta$Deniz_2021$TARGETS$sample = str_sub(AF_Meta$Deniz_2021$TARGETS$sample, start = 1, end = 10)
+AF_Meta$Deniz_2021$TARGETS$sample
+```
+
+
+```{r}
+# For each dataset, we will add an additional column named 'ExpID' to the TARGETS data frame which contains the identifier for that dataset.
+AF_Meta <- map2(AF_Meta, names(AF_Meta), add_exp_id)
+```
+
+```{r}
+# Extracting the names from the AF_Meta list to cread an ids variable for further analysis
+ids <- data.frame(ID = names(AF_Meta))
+```
+
+# 4. Differential Expression Analysis Performed on Each Dataset
+```{r}
+# We apply the run_AFlimma function to each dataset in the AF_Meta object. This function, available in the "utils_AF_Meta.R" file, uses the linear modeling capabilities of the limma package to perform differential gene expression analysis. The results are stored back into this same object.
+
+AF_Meta[ids[[1]]] = lapply(AF_Meta[ids[[1]]], function(x){
+  x[["AF_limma"]] = run_AFlimma(x$GEX, x$TARGETS)
+  return(x)
+})
+
+experiments = names(AF_Meta)
+names(experiments) = experiments
+experiment_size = sort(unlist(lapply(AF_Meta, 
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+```
+
+# 6. Collection of Results
+```{r}
+# Will use the "get_all_limma_AF" function to gather all the results from different studies together into a few data frames (p-values, t-values, and lfc).
+```
+
+
+# p-values of each study
+```{r}
+p_matrix = data.frame(get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "P.Value"),
+                      check.names = F) %>%
+           mutate_all(function(x) -log10(x)) %>% 
+           gather("experiment","pvalue") %>% na.omit()
+```
+
+# t-values of each study
+```{r}
+t_matrix = data.frame(get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "t"),
+                      check.names = F) %>% 
+  gather("experiment","tvalue") %>% na.omit()
+```
+
+# log fold change of each study
+```{r}
+lfc_matrix = data.frame(get_all_limma_AF(meta_list = AF_Meta,
+                            limma_column = "logFC"),
+                        check.names = F) %>% 
+  gather("experiment","lfc") %>% na.omit()
+
+deg_stats = list("pvalue" = p_matrix,
+                 "tvalue" = t_matrix,
+                 "lfc" = lfc_matrix)
+```
+
+# Save the results
+```{r}
+saveRDS(deg_stats,
+        "./deg_stats.rds")
+
+saveRDS(AF_Meta, file = "data/AF_Meta.rds")
+```
+
+# 7. Visualization
+
+```{r}
+# We will finally create violin plots for the -log10(p-values), t-values, and log-fold changes (LFC) from each study. 
+
+
+pval = ggplot(deg_stats$pvalue,
+       aes(x = factor(experiment, levels = names(experiment_size)), 
+           y = pvalue)) + 
+  geom_violin(fill = "lightblue", alpha = 0.8) + # change fill color and transparency
+  geom_boxplot(width=0.2, fill="white") + # add boxplot
+  labs(
+    title = "P-value distribution per experiment - RAA", # add title
+    x = "Experiment", # label x-axis
+    y = "-log10(p-value)" # label y-axis
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size=12),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    axis.text = element_text(size=10),
+    panel.background = element_rect(fill=NULL, color = "black"),
+    panel.grid = element_blank()
+  )
+
+```
+
+```{r}
+tval = ggplot(deg_stats$tvalue,
+       aes(x = factor(experiment, levels = names(experiment_size)), 
+           y = tvalue)) +
+  geom_violin(fill = "lightblue", alpha = 0.8) + # change fill color and transparency
+  geom_boxplot(width=0.2, fill="white") + # add boxplot
+  labs(
+    title = "T-value distribution per experiment - RAA", # add title
+    x = "Experiment", # label x-axis
+    y = "T-value" # label y-axis
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size=12),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    axis.text = element_text(size=10),
+    panel.background = element_rect(fill=NULL, color = "black"),
+    panel.grid = element_blank()
+  )
+```
+
+```{r}
+lfc = ggplot(deg_stats$lfc,
+       aes(x = factor(experiment, levels = names(experiment_size)), 
+           y = lfc)) +
+  geom_violin(fill = "lightblue", alpha = 0.8) + # change fill color and transparency
+  geom_boxplot(width=0.2, fill="white") + # add boxplot
+  labs(
+    title = "Log Fold Change distribution per experiment - RAA", # add title
+    x = "Experiment", # label x-axis
+    y = "Log Fold Change (LFC)" # label y-axis
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size=12),
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    axis.text = element_text(size=10),
+    panel.background = element_rect(fill=NULL, color = "black"),
+    panel.grid = element_blank()
+  )
+```
+
+```{r}
+# Combining the plots and saving as PDF
+pdf("data/figures/sup/SupplementalFigure9.pdf",
+    width = 21,
+    height = 25)
+
+
+grid.draw(plot_grid(pval,tval,lfc,
+          align = "v", ncol = 1,
+          rel_heights = c(1,1,1.3)))
+grid.text(paste0("B"), x = 0.01, y = 0.993, 
+          just = "center", gp = gpar(fontsize = 20, col = "black", fontface="bold"))
+
+
+dev.off()
+```
+
+

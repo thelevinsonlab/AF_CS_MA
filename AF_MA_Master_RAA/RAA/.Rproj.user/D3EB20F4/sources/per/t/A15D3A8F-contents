@@ -1,0 +1,168 @@
+---
+title: "Meta_AF_Dataset_Combination"
+output: html_document
+date: "2023-06-06"
+---
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(ggforce)
+library(cowplot)
+library(patchwork) 
+library(gridExtra)
+library(grid)
+```
+
+```{r}
+source("src/utils_AF_Meta.R")
+```
+
+# 1. Creation of the list of data sets
+```{r}
+AF_Meta = list()
+```
+
+# Loading of each dataset, and add to AF_Meta list
+## Each list entry contains gene expression data ("GEX") and metadata ("TARGETS")
+```{r}
+##GSE2240
+load(file = "data_processing/scripts/GSE2240/GSE2240_counts.ro")
+load(file = "data_processing/scripts/GSE2240/GSE2240_targets.ro")
+
+AF_Meta[["GSE2240"]] = list("GEX"= GSE2240_counts,
+                                       "TARGETS" = GSE2240_targets)
+
+##GSE115574
+load(file = "data_processing/scripts/GSE115574/GSE115574_counts.ro")
+load(file = "data_processing/scripts/GSE115574/GSE115574_targets.ro")
+
+AF_Meta[["GSE115574"]] = list("GEX"= GSE115574_counts,
+                                       "TARGETS" = GSE115574_targets)
+
+##Herrera_Rivero
+load(file = "data_processing/scripts/Herrera_Rivero/Herrera_Rivero_count.ro")
+load(file = "data_processing/scripts/Herrera_Rivero/Herrera_Rivero_targets.ro")
+
+Herrera_Rivero_count <- as.matrix(Herrera_Rivero_count)
+
+AF_Meta[["Herrera_Rivero"]] = list("GEX"= Herrera_Rivero_count,
+                                       "TARGETS" = targets)
+
+##GSE79768
+load(file = "data_processing/scripts/GSE79768/GSE79768_counts.ro")
+load(file = "data_processing/scripts/GSE79768/GSE79768_targets.ro")
+
+AF_Meta[["GSE79768"]] = list("GEX"= GSE79768_counts,
+                                       "TARGETS" = GSE79768_targets)
+
+##GSE128188
+load(file = "data_processing/scripts/GSE128188/GSE128188_counts.ro")
+load(file = "data_processing/scripts/GSE128188/GSE128188_targets.ro")
+
+AF_Meta[["GSE128188"]] = list("GEX"= GSE128188_counts,
+                                       "TARGETS" = GSE128188_targets)
+
+##Ohki
+
+load(file = "data_processing/scripts/Ohki/Ohki_counts.ro")
+load(file = "data_processing/scripts/Ohki/Ohki_targets.ro")
+
+AF_Meta[["Ohki"]] = list("GEX"= Ohki_counts,
+                                       "TARGETS" = Ohki_targets)
+
+
+##Darkow
+
+load(file = "data_processing/scripts/Darkow/Darkow_count.ro")
+load(file = "data_processing/scripts/Darkow/Darkow_targets.ro")
+
+AF_Meta[["Darkow"]] = list("GEX"= Darkow_count,
+                                       "TARGETS" = targets)
+```
+
+
+#2. # Create a dictionary to map old IDs (GEO IDs) to new IDs (publication names)
+```{r}
+#Creating dicitonary
+GEO_ID = c("GSE2240", "GSE115574","Herrera_Rivero", "GSE79768", "GSE128188", "Ohki", "Darkow")
+
+newID = c("Barth_2005","Deniz_2021", "Herrera_Rivero_2022", "Tsai_2016", "Thomas_2019", "Ohki_2005", "Darkow_2021")
+
+dictionary = data.frame(GEO_ID, newID,
+                        stringsAsFactors = F)
+
+save(dictionary, file = "C:data_processing/tools/dictionaryIDs.ro")
+```
+
+# Rename the entries in AF_Meta list according to the new IDs
+```{r}
+rownames(dictionary) = dictionary$GEO_ID
+current_ids = names(AF_Meta)
+
+names(AF_Meta) = dictionary[current_ids, "newID"]
+```
+
+# 3. Generate boxplots for each dataset to assess data quality
+
+```{r}
+experiments = names(AF_Meta)
+
+pdf(file = "data_processing/complementary_files/boxplotsMETA.pdf",width = 28, height = 8)
+for(x in experiments){
+  boxplot(AF_Meta[[x]]$GEX, main=x)
+}
+dev.off()
+```
+
+
+# 4. Generate MDS plots for each dataset to visualize similarities/differences in samples
+```{r}
+pdf(file = "data_processing/complementary_files/MDSMETA.pdf",width = 6, height = 4)
+for(x in experiments){
+  myMDS_AF(AF_Meta[[x]]$GEX,AF_Meta[[x]]$TARGETS, main=x)
+}
+dev.off()
+```
+
+# 5. Save the combined data for further analysis
+```{r}
+saveRDS(AF_Meta, file = "data/AF_Meta.rds")
+```
+
+# 6. Calculate the number of samples in each condition for each study
+```{r}
+AF = c()
+SR = c()
+
+for (study in names(AF_Meta)){
+  AF= c(AF,dim(AF_Meta[[study]]$TARGETS %>% dplyr::filter(condition == "AF"))[1])
+  SR = c(SR,dim(AF_Meta[[study]]$TARGETS %>% dplyr::filter(condition == "SR"))[1])
+}
+
+sample.sizes = data.frame("study"= as.character(names(AF_Meta)), "AF"= AF, "SR"= SR) %>% 
+  mutate(total = rowSums(.[,2:3])) %>%
+  arrange(desc(total))
+```
+
+# Print summary statistics of the sample sizes
+```{r}
+print("total sample summary")
+print(sample.sizes)
+
+print("total samples")
+print(sum(sample.sizes$total))
+
+print("number of controls")
+print(sum(sample.sizes$SR))
+
+print("number of AF")
+print(sum(sample.sizes$AF))
+
+```
+
+# Save the sample size data for future reference
+```{r}
+saveRDS(sample.sizes, file = "data/sample_sizes.rds")
+```
+

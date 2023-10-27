@@ -1,0 +1,2 @@
+"0","#View(example1_mapped)"
+"0","hits <- example1_mapped$STRING_id"

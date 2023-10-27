@@ -1,0 +1,2 @@
+"0","res <- tmodCERNOtest(LAA_DE_genes$gene, mset = msig)"
+"0","head(res)"

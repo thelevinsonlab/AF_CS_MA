@@ -1,0 +1,4 @@
+"0","AF_Meta = lapply(AF_Meta, function(x){"
+"0","  x[[""GEX_norm""]] = PLIER::rowNorm(x[[""GEX""]])"
+"0","  return(x)"
+"0","})"

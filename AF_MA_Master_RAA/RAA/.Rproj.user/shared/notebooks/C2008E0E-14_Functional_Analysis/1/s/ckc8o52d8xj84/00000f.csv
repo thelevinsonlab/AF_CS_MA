@@ -1,0 +1,7 @@
+"0","# Run Multivariate Linear Model (MLM) to identify pathways"
+"0",""
+"0","contrast_acts_pathway <- run_mlm(mat=CS_rank_pathway, net=net_pathway, .source='source', .target='target',"
+"0","                  .mor='weight', minsize = 5)"
+"0",""
+"0",""
+"0","contrast_acts_pathway <- contrast_acts_pathway[order(contrast_acts_pathway$p_value),]"

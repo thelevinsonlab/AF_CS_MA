@@ -1,0 +1,57 @@
+---
+title: "GSE128188"
+output: html_document
+date: "2023-01-09"
+---
+
+```{r}
+library(tidyverse)  
+library(limma)
+library(edgeR)
+library(stringr)
+```
+
+
+```{r}
+#1) Read gene expression data, filter & normalize, and save as count file. 
+df= read.table("./GSE128188_CountsV2_EdgeR.txt", header = TRUE, sep = "\t")
+rownames(df) <- df[,1]
+df[,1] <- NULL
+df <- subset(df, select = -grep("RA", names(df)))
+
+#Targets file creation with only LA samples
+targets <- as.data.frame(matrix(NA,length(names(df)),2))
+names(targets) <- c("sample","condition")
+targets$sample <- names(df)
+GSE128188_targets <- targets %>% mutate(tissue = str_sub(sample, start = -2, end = -1)) %>% 
+  filter(!grepl("RA", tissue)) %>%
+  mutate(condition = ifelse(row_number() <= 5, "SR",
+                 ifelse(row_number() <= 10, "AF", condition))) %>%
+  select(-tissue)
+
+save(GSE128188_targets, file = "./GSE128188_targets.ro")
+
+#check if sample names are in the same order as in the target file 
+colnames(df) == GSE128188_targets$sample
+
+#create DGE class object
+group <- GSE128188_targets$condition
+dge <- DGEList(counts=df, group=group)
+
+#detect and remove low expressed genes
+keep <- filterByExpr(dge)
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+
+# Apply normalization method TMM (trimmed mean of M)
+dge <- calcNormFactors(dge)
+
+# use limma voom to transform count data to log2 counts per million
+v <- voom(dge, plot=TRUE)
+
+GSE128188_counts= v$E
+save(GSE128188_counts, file = "./GSE128188_counts.ro")
+```
+
+
+
+

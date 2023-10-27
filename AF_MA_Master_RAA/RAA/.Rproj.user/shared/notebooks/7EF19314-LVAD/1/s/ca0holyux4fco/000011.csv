@@ -1,0 +1,8 @@
+"0","# Extract the time and CIF values
+"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","time_death <- cif_result$`1 Death`$time"
+"2","Error: object 'cif_result' not found
+"

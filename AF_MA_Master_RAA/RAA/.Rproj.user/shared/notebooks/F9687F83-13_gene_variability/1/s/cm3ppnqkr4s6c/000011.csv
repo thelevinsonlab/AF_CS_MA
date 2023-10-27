@@ -1,0 +1,8 @@
+"0","# Create figure"
+"0","pdf(""data/figures/sup/SupplementalFigure11.pdf"","
+"0","    width = 10,"
+"0","    height = 8)"
+"0",""
+"0","plot(plot_grid(anova_plt_v2, anova_boxplt_v2,"
+"0","               align = ""h"", ncol = 1,"
+"0","               rel_heights = c(.5,1)))"

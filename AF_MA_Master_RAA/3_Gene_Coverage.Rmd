@@ -1,0 +1,180 @@
+---
+title: "3_Gene_Coverage"
+output: html_document
+date: "2023-08-01"
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+
+#Load previously processed data
+AF_Meta= readRDS("data/AF_Meta.rds")
+experiments = names(AF_Meta)
+names(experiments) = experiments
+```
+
+# Jaccard index of all genes
+```{r}
+# 1. Jaccaard Index
+experiment_size = sort(unlist(lapply(AF_Meta,
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+
+# Get the gene list for all datasets
+study_genelist_all = lapply(AF_Meta, function(x){
+  gene_list = rownames(x$GEX)
+  return(gene_list)
+})
+
+```
+
+# Compute Jaccard Index for each pair of studies
+```{r}
+jaccard_res_all =  enframe(lapply(experiments, function(set_a){
+  genes_a = study_genelist_all[[set_a]]
+  j_ix_a = lapply(experiments, function(set_b){
+    
+    genes_b = study_genelist_all[[set_b]]
+    
+    #Jaccard Index
+    j_ix = length(intersect(genes_a,genes_b))/length(union(genes_a,genes_b))
+    
+    return(j_ix)
+  })
+  
+  j_ix_a = enframe(j_ix_a, "StudyB","JaccardIx") %>% 
+    unnest()
+  
+  return(j_ix_a)
+  
+}), "StudyA") %>% unnest() %>%
+  mutate(StudyA = factor(StudyA,
+                         levels = names(experiment_size)),
+         StudyB = factor(StudyB,
+                         levels = names(experiment_size)))
+```
+
+# Compute mean of Jaccard Index for each study
+```{r}
+summary_concordance = jaccard_res_all %>% 
+  dplyr::filter(StudyA != StudyB) %>% 
+  group_by(StudyA) %>%
+  summarise(mean(JaccardIx))
+```
+
+# Compute mean of Jaccard Index for each study
+```{r}
+mean_jaccard <- mean(summary_concordance[[2]])
+print("Summary concordance") 
+print(mean_jaccard)
+```
+
+# Continue with data transformation and saving the result
+```{r}
+jaccard_res_all = jaccard_res_all %>% 
+  mutate(JaccardIx= ifelse(StudyA==StudyB, NA,JaccardIx))%>% #add NAs to same studies
+  spread(StudyA,JaccardIx) 
+
+jaccard_res_mat = (as.matrix(jaccard_res_all[,-1]))
+rownames(jaccard_res_mat) = jaccard_res_all[[1]]
+
+jaccard_res_mat[upper.tri(jaccard_res_mat[names(experiment_size),
+                                          names(experiment_size)])] = NA
+
+jaccard_df = reshape2::melt(t(jaccard_res_mat),na.rm = T) %>% 
+  mutate(Var2 = factor(as.character(Var2),
+                       levels = rev(names(experiment_size))))
+
+#save file for plotting
+saveRDS(jaccard_df, file = "data/figure_objects/jaccard_df_allgenes.rds")
+```
+
+# Load sample size data
+```{r}
+sample.size = readRDS(file ="data/sample_sizes.rds")
+```
+
+# Plot Jaccard Index heatmap
+```{r}
+plot.jaccard = ggplot(jaccard_df, aes(x = Var1, 
+                                      y = Var2,
+                                      fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2)), 
+            color = "white", 
+            size = 3) +  # You can adjust size to fit your plot
+  theme_minimal() + xlab("Predicted") +
+  ylab("Predictor") +
+  theme(panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,
+                                   hjust = 1),
+        text = element_text(size =15))+
+  scale_fill_gradientn(colours=RColorBrewer::brewer.pal(9, 'OrRd'),
+                       limits=c(0, 1)) +
+  labs(fill = "Jaccard \nIndex")
+```
+
+# Count the total gene coverage per study
+```{r}
+genes_count <- as.data.frame(lengths(study_genelist_all))
+genes_count <- rownames_to_column(genes_count, "study")
+names(genes_count)[2] <- 'genes'
+
+sample.size <- sample.size %>% left_join(genes_count, by= "study")
+
+sample.size = sample.size %>% 
+  mutate(study= factor(study,  levels = rev(as.character(sample.size$study))),
+         genes= genes/1000)
+
+# Plot gene coverage
+plot.coverage = ggplot(data = sample.size, 
+                       aes(x= study, 
+                           y= genes))+
+  geom_col(fill = "#902820")+
+  ylab(expression(Gene~coverage~(10^3))) + 
+  theme_minimal()+
+  scale_y_continuous(position = "right") + 
+  coord_flip()+
+  theme(axis.title.y = element_blank(),
+        text = element_text(size =15),
+        axis.title.x= element_text(size= 12)
+  )
+```
+
+# Combine the gene coverage plot and the Jaccard index heatmap
+```{r}
+plot.coverage.jaccard =  plot_grid(plot.coverage,plot.jaccard,
+                                   ncol = 2,
+                                   align = "h",
+                                   labels = c("C","D"), 
+                                   rel_widths = c(1,1.2))
+```
+
+# Prepare the annotations for the plots
+```{r}
+# multiplied by 1000 to get back to original scale
+median_genes <- median(sample.size$genes) * 1000  
+range_genes <- range(sample.size$genes) * 1000    
+
+# Create the annotation text
+annotation_text1 <- paste0("Median Gene Coverage: ", round(median_genes, 0), " genes, Range: ", 
+                           round(range_genes[1], 0), "-", round(range_genes[2], 0))
+```
+
+# Save the combined plot as a PDF
+```{r}
+pdf("data/figures/sup/SupplementalFigure6.pdf", width = 14, height= 7)
+grid.draw(plot.coverage.jaccard)
+grid.text(annotation_text1, x = 0.28, y = 0.10, 
+          just = "center", gp = gpar(fontsize = 14, col = "black")) # adjust position, color, size as needed
+grid.text(paste0("Mean Jaccard Index ~ ", round(mean_jaccard, 2)), x = 0.8, y = 0.85, 
+          just = "center", gp = gpar(fontsize = 14, col = "black"))
+dev.off()
+```
+

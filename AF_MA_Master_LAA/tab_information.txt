@@ -1,0 +1,15 @@
+First author name	Information	Age	Sex	Ethnicity	Comorbidities	Treatment	LVEF
+Adam O, et al	Group	Group	NR	NR	NR	NR	NR
+Barth AS, et al	Individual	Individual	Individual	NR	Individual	Individual	Individual
+Darkow E, et al	Individual	Individual	Individual	NR	NR	NR	NR
+Deniz G, et al	Group	Group	Group	NR	Group	Group	Group
+Donate-Puertas R, et al	Group	Group	Group	NR	Group	Group	Group
+Herrera-Rivero M, et al	Individual	Individual	Individual	NR	NR	NR	NR
+Hsu J, et al.	NR	NR	NR	NR	NR	NR	NR
+Ohki R, et al	Group	Individual	Individual	NR	Individual	Group	Group
+Santos JL, et al	Group	Group	Group	NR	Group	NR	Group
+Sun H, et al	Group	Group	Group	NR	NR	NR	NR
+Thomas AM, et al	Group	Group	Group	NR	Group	NR	NR
+Tsai FC, et al	Group	Group	Group	NR	Group	NR	Group
+Yeh YH, et al	Individual	Individual	Individual	NR	Individual	Individual	Individual
+Zhu X, et al	Group	Group	Group	NR	Group	Group	Group

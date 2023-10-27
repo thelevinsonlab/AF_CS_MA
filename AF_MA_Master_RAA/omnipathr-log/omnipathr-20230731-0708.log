@@ -1,0 +1,44 @@
+[2023-07-31 07:08:21] [INFO]    [OmnipathR] Welcome to OmnipathR!
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:08:21] [INFO]    [OmnipathR] Initialized cache: `C:\Users\sergi\AppData\Local\cache\OmnipathR`.
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/db/db_def.json` (encoding: UTF-8).
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/magic_bytes.json` (encoding: UTF-8).
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/urls.json` (encoding: UTF-8).
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/id_types.json` (encoding: UTF-8).
+[2023-07-31 07:08:21] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:13:28] [TRACE]   [OmnipathR] Loaded data from RDS `C:\Users\sergi\AppData\Local\cache\OmnipathR/485498a0b8637e8a936f7efbf1fcc7b742d7867a-1.rds`.
+[2023-07-31 07:13:28] [INFO]    [OmnipathR] Loaded from cache: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=collectri&organisms=9606&dorothea_levels=A,B&fields=sources,references,curation_effort&license=academic`
+[2023-07-31 07:13:29] [SUCCESS] [OmnipathR] Loaded 64495 interactions from cache.
+[2023-07-31 07:19:04] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-07-31 07:19:04] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:19:04] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-07-31 07:19:04] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:19:04] [INFO]    [OmnipathR] Cache record does not exist: `https://omnipathdb.org/annotations?resources=PROGENy&license=academic`
+[2023-07-31 07:19:04] [INFO]    [OmnipathR] Retrieving URL: `https://omnipathdb.org/annotations?resources=PROGENy&license=academic`
+[2023-07-31 07:19:04] [TRACE]   [OmnipathR] Attempt 1/3: `https://omnipathdb.org/annotations?resources=PROGENy&license=academic`
+[2023-07-31 07:19:06] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-07-31 07:19:06] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:19:06] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-07-31 07:19:06] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:19:06] [INFO]    [OmnipathR] Cache item `3492392585ba05414edfae46801492076437d7e7` version 1: status changed from `unknown` to `started`.
+[2023-07-31 07:19:06] [TRACE]   [OmnipathR] Exporting object to RDS: `C:\Users\sergi\AppData\Local\cache\OmnipathR/3492392585ba05414edfae46801492076437d7e7-1.rds`.
+[2023-07-31 07:19:07] [TRACE]   [OmnipathR] Exported RDS to `C:\Users\sergi\AppData\Local\cache\OmnipathR/3492392585ba05414edfae46801492076437d7e7-1.rds`.
+[2023-07-31 07:19:07] [INFO]    [OmnipathR] Download ready [key=3492392585ba05414edfae46801492076437d7e7, version=1]
+[2023-07-31 07:19:07] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-07-31 07:19:07] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:19:07] [INFO]    [OmnipathR] Cache item `3492392585ba05414edfae46801492076437d7e7` version 1: status changed from `started` to `ready`.
+[2023-07-31 07:19:07] [SUCCESS] [OmnipathR] Downloaded 700239 annotation records.
+[2023-07-31 07:56:44] [TRACE]   [OmnipathR] Loaded data from RDS `C:\Users\sergi\AppData\Local\cache\OmnipathR/485498a0b8637e8a936f7efbf1fcc7b742d7867a-1.rds`.
+[2023-07-31 07:56:44] [INFO]    [OmnipathR] Loaded from cache: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=collectri&organisms=9606&dorothea_levels=A,B&fields=sources,references,curation_effort&license=academic`
+[2023-07-31 07:56:45] [SUCCESS] [OmnipathR] Loaded 64495 interactions from cache.
+[2023-07-31 07:58:30] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-07-31 07:58:30] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:58:30] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-07-31 07:58:30] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-07-31 07:58:31] [TRACE]   [OmnipathR] Loaded data from RDS `C:\Users\sergi\AppData\Local\cache\OmnipathR/3492392585ba05414edfae46801492076437d7e7-1.rds`.
+[2023-07-31 07:58:31] [INFO]    [OmnipathR] Loaded from cache: `https://omnipathdb.org/annotations?resources=PROGENy&license=academic`
+[2023-07-31 07:58:31] [SUCCESS] [OmnipathR] Loaded 700239 annotation records from cache.

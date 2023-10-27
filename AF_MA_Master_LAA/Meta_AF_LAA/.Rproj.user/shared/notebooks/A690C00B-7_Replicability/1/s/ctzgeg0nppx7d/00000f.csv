@@ -1,0 +1,3 @@
+"0","# Here we will create a list of the top 500 genes from each experiment in the AF_Meta object. These genes will be used in the subsequent analysis."
+"0",""
+"0","study_genelist = purrr::map(AF_Meta, ~dplyr::slice(.x$AF_limma, 1:500)[[1]]) # get top 500 genes"

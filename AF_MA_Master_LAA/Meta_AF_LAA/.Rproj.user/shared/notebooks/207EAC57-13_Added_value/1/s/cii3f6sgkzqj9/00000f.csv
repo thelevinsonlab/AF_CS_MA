@@ -1,0 +1,27 @@
+"0","# Here we get the results from performing the meta-analysis"
+"0",""
+"0","fisher_rank = run_fisher_meta_AF(meta_list = AF_Meta,"
+"0","                              n_missing = length(AF_Meta) - 5)"
+"2","Lade nötiges Paket: survival
+"
+"2","Lade nötiges Paket: prodlim
+"
+"2","Warnung: Paket ‘prodlim’ wurde unter R Version 4.2.3 erstellt"
+"2","
+Attache Paket: ‘prodlim’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:igraph’:
+
+    neighborhood
+
+"
+"0","sum(fisher_rank < .00005)"
+"1","[1]"
+"1"," 170"
+"1","
+"
+"0","genes = names(fisher_rank)"
+"0",""
+"0","fisher_rank_RAA = run_fisher_meta_AF(meta_list = AF_Meta_RAA,"
+"0","                              n_missing = length(AF_Meta_RAA) - 5)"

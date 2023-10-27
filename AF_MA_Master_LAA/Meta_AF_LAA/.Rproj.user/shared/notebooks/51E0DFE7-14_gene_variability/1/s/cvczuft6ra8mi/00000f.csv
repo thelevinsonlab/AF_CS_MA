@@ -1,0 +1,1 @@
+"0","meta_targets = meta_targets %>% mutate(Tech = case_when(ExpID == ""Hsu_2018"" | ExpID == ""Thomas_2019"" | ExpID == ""Sun_2021"" | ExpID == ""Herrera_Rivero_2022"" | ExpID == ""Santos_2020"" | ExpID == ""Zhu_2020""  ~ ""RNA-Seq"", TRUE ~ ""microarray""))"

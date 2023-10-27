@@ -1,0 +1,256 @@
+---
+title: "Sample_info_plots"
+output:
+  word_document: default
+  html_document: default
+date: "2023-08-01"
+---
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(ggforce)
+library(cowplot)
+library(patchwork) 
+library(gridExtra)
+library(grid)
+```
+
+```{r}
+tab_information <- read.delim2("./tab_information.txt")
+
+# Convert the data to long format
+tab_information_long <- tab_information %>%
+  pivot_longer(cols = -c(First.author.name, Information), names_to = "Variable", values_to = "Type")
+
+# Define the desired order
+levels_order <- c("Age", "Sex", "Ethnicity", "Comorbidities", "Treatment", "LVEF")
+
+# Convert 'Variable' to a factor with the specified level order
+tab_information_long$Variable <- factor(tab_information_long$Variable, levels = levels_order)
+
+# Generate the graph
+final_plot <- ggplot(tab_information_long, aes(x = reorder(First.author.name, First.author.name), y = Variable, fill = Type)) +
+  geom_tile(color = "black", linewidth = 0.5) +
+  geom_text(aes(label = ifelse(Type == "Group", "Gr", ifelse(Type == "Individual", "Ind", "NR"))), 
+            size = 3, color = "black") +
+  scale_fill_manual(values = c("Group" = "#E69F00", "Individual" = "#009E73", "NR" = "#999999")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE))
+
+# Save the plot
+ggsave("info_plot.png", plot = final_plot, width = 6, height = 8, dpi = 600)
+```
+
+```{r}
+sample_information <- read.delim("./sample_information.txt")
+head(sample_information)
+
+# Arrange the data in ascending order of total_patients
+data <- sample_information %>%
+    arrange(total_patients)
+
+# Create a new dataframe for plotting
+plot_data <- data.frame(
+    Study = factor(data$First.author.name, levels = data$First.author.name),
+    AF = data$total_af,
+    SR = data$total_sr
+)
+
+# Melt the data into long format
+plot_data_long <- reshape2::melt(plot_data, id.vars = "Study", variable.name = "Condition", value.name = "Count")
+
+# Create the bar plot
+sample_plot <- ggplot(plot_data_long, aes(x = Study, y = Count, fill = Condition)) +
+    geom_bar(stat = "identity", position = "stack") +
+    coord_flip() +
+    labs(x = "", y = "Number of Patients", title = "") +
+    theme_classic() +
+    scale_fill_manual(values = c("AF" = "#0072B2", "SR" = "#E69F00"))
+
+# Save the plot
+ggsave("sample_plot.png", plot = sample_plot, width = 4, height = 8, dpi = 600)
+```
+
+
+```{r}
+leg1 <- get_legend(final_plot + 
+                     guides(color = guide_legend(nrow = 1)) +
+                     theme(legend.position = "bottom"))
+leg2 <- get_legend(sample_plot+ 
+                     guides(color = guide_legend(nrow = 1)) +
+                     theme(legend.position = "bottom"))
+
+plot.samplesize = sample_plot +theme(legend.position = "none")
+plot.tile = final_plot  +theme(legend.position = "none")
+
+plot.tilesample = plot_grid(plot.tile, sample_plot,
+                      ncol = 2,
+                      align = "h",
+                      labels = "AUTO", 
+                      rel_widths = c(1,1.5))
+
+blank_p <- plot_spacer() + theme_void()
+
+leg12 <- plot_grid(blank_p,leg1,blank_p, leg2,
+                   blank_p, blank_p,
+                   nrow = 1)
+
+fig_1 = plot_grid(plot.tilesample, leg12, nrow = 2,
+                    align = "h",
+                    axis = "t",
+                    rel_widths = c(1, 0.1), 
+                    rel_heights = c(1,0.1))
+fig_1
+```
+
+```{r}
+pdf("data/figures/Figure2.pdf",
+    width = 10,
+    height = 6)
+fig_1
+dev.off()
+
+ggsave("data/figures/png/Figure1.png", plot = fig_1, width = 10, height = 6, dpi = 900)
+```
+
+
+```{r}
+patient_info <- read.delim2("./patient_info.txt")
+
+# Convert the necessary variables to numeric
+patient_info$mean_age_af <- as.numeric(patient_info$mean_age_af)
+patient_info$age_sd_af <- as.numeric(patient_info$age_sd_af)
+patient_info$mean_age_sr <- as.numeric(patient_info$mean_age_sr)
+patient_info$age_sd_sr <- as.numeric(patient_info$age_sd_sr)
+
+# Reshape data
+df_af <- patient_info[, c("First.author.name", "mean_age_af", "age_sd_af")]
+names(df_af) <- c("Study", "Mean_Age", "SD_Age")
+df_af$Group <- "AF"
+
+df_sr <- patient_info[, c("First.author.name", "mean_age_sr", "age_sd_sr")]
+names(df_sr) <- c("Study", "Mean_Age", "SD_Age")
+df_sr$Group <- "SR"
+
+df <- rbind(df_af, df_sr)
+```
+
+```{r}
+plot_1 <- ggplot(df, aes(x = Group, y = Mean_Age, fill = Group)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.5) +
+  geom_errorbar(aes(ymin = Mean_Age - SD_Age, ymax = Mean_Age + SD_Age), 
+                width = .2, position = position_dodge(.9)) +
+  facet_grid(. ~ Study, scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+        strip.text.x = element_text(size = 8, angle = 90),
+        panel.spacing = unit(0.5, "lines")) +
+  theme_minimal() +
+  labs(x = "Group", y = "Mean Age (years)", fill = "Group") +
+  scale_fill_manual(values = c("AF" = "#355DD0", "SR" = "#E6EA4F"))
+```
+
+
+```{r}
+# Convert necessary variables to numeric
+patient_info$males_af <- as.numeric(patient_info$males_af)
+patient_info$males_sr <- as.numeric(patient_info$males_sr)
+
+# Calculate proportion of males and females
+df_af <- patient_info[, c("First.author.name", "males_af", "total_af")]
+names(df_af) <- c("Study", "Males", "Total")
+df_af$Group <- "AF"
+df_af$Proportion_Males <- df_af$Males / df_af$Total
+df_af$Proportion_Females <- 1 - df_af$Proportion_Males
+
+df_sr <- patient_info[, c("First.author.name", "males_sr", "total_sr")]
+names(df_sr) <- c("Study", "Males", "Total")
+df_sr$Group <- "SR"
+df_sr$Proportion_Males <- df_sr$Males / df_sr$Total
+df_sr$Proportion_Females <- 1 - df_sr$Proportion_Males
+
+# Combine dataframes
+df <- rbind(df_af, df_sr)
+
+# Melt dataframes to long format for plotting
+df_melted <- reshape2::melt(df, id.vars = c("Study", "Group"), measure.vars = c("Proportion_Males", "Proportion_Females"))
+df_melted$variable <- factor(df_melted$variable, levels = c("Proportion_Males", "Proportion_Females"))
+
+df_melted$Study_Group <- paste(df_melted$Study, df_melted$Group, sep = "-")
+```
+
+```{r}
+plot_2 <- ggplot(df_melted, aes(x = Group, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.5) +
+  facet_wrap(~ Study, scales = "free_x", ncol = 14) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+        strip.text = element_text(size = 8),
+        panel.spacing = unit(0.5, "lines")) +
+  theme_minimal() +
+  labs(x = "Group", y = "Proportion", fill = "Gender") +
+  scale_fill_manual(values = c("Proportion_Males" = "#355DD0", "Proportion_Females" = "#E6EA4F"),
+                    labels = c("Proportion_Males" = "Males", "Proportion_Females" = "Females"))
+```
+
+
+```{r}
+# Convert the lvef variables to numeric
+patient_info$mean_lvef_af <- as.numeric(patient_info$mean_lvef_af)
+patient_info$lvef_sd_af <- as.numeric(patient_info$lvef_sd_af)
+patient_info$mean_lvef_sr <- as.numeric(patient_info$mean_lvef_sr)
+patient_info$lvef_sd_sr <- as.numeric(patient_info$lvef_sd_sr)
+
+# Reshape data
+df_af <- patient_info[, c("First.author.name", "mean_lvef_af", "lvef_sd_af")]
+names(df_af) <- c("Study", "Mean_LVEF", "SD_LVEF")
+df_af$Group <- "AF"
+
+df_sr <- patient_info[, c("First.author.name", "mean_lvef_sr", "lvef_sd_sr")]
+names(df_sr) <- c("Study", "Mean_LVEF", "SD_LVEF")
+df_sr$Group <- "SR"
+
+df <- rbind(df_af, df_sr)
+```
+
+```{r}
+plot_3 <- ggplot(df, aes(x = Group, y = Mean_LVEF, fill = Group)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.5) +
+  geom_errorbar(aes(ymin = Mean_LVEF - SD_LVEF, ymax = Mean_LVEF + SD_LVEF), 
+                width = .2, position = position_dodge(.9)) +
+  facet_grid(. ~ Study, scales = "free_x", space = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), 
+        strip.text.x = element_text(size = 8, angle = 90),
+        panel.spacing = unit(0.5, "lines")) +
+  theme_minimal() +
+  labs(x = "Group", y = "Mean LVEF (%)", fill = "Group") +
+  scale_fill_manual(values = c("AF" = "#355DD0", "SR" = "#E6EA4F"))
+```
+
+```{r}
+# Annotating the plots
+plot1 <- annotate_figure(plot_1, 
+                         top = textGrob("A. Age distribution per study and study group", x = unit(0.05, "npc"), y = unit(0.80, "npc"), just=c("left", "top"), gp=gpar(fontsize=14, fontface="bold")))
+plot2 <- annotate_figure(plot_2, 
+                         top = textGrob("B. Sex distribution per study and study group", x = unit(0.05, "npc"), y = unit(0.80, "npc"), just=c("left", "top"), gp=gpar(fontsize=14, fontface="bold")))
+plot3 <- annotate_figure(plot_3, 
+                         top = textGrob("C. LVEF distribution per study and study group", x = unit(0.05, "npc"), y = unit(0.80, "npc"), just=c("left", "top"), gp=gpar(fontsize=14, fontface="bold")))
+
+```
+
+
+```{r}
+# Save plots to a single file
+pdf("data/figures/sup/SupplementalFigure5.pdf", width = 22, height = 20)
+grid.arrange(plot1, plot2, plot3, nrow = 3)
+dev.off()
+```
+

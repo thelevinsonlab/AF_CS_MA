@@ -1,0 +1,12 @@
+"0","pdf(""data/figures/Figure2.pdf"",
+    width = 10,
+    height = 6)
+fig_1
+dev.off()
+"
+"1","null device "
+"1","
+"
+"1","          1 "
+"1","
+"

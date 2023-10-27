@@ -1,0 +1,1553 @@
+# Load necessary packages
+library(limma)
+library(edgeR)
+library(readr)
+library(WGCNA)
+library(DESeq2)
+library(GEOquery)
+library(tidyverse)
+library(CorLevelPlot)
+library(gridExtra)
+library(org.Hs.eg.db)
+library(clusterProfiler)
+library(AnnotationDbi)
+library(msigdbr)
+library(openxlsx)
+library(writexl)
+library(biomaRt)
+library(pheatmap)
+
+allowWGCNAThreads()
+
+# Read the count data
+data <- read.delim("~/PhD Heidelberg/Projects/New_chagas/GSE191081_Count_table.txt")
+
+# get metadata
+geo_id <- "GSE191081"
+gse <- getGEO(geo_id, GSEMatrix = TRUE)
+phenoData <- pData(phenoData(gse[[1]]))
+head(phenoData)
+write_xlsx(phenoData, "phenoData.xlsx")
+phenoData <- phenoData[,c(1,2,37)]
+
+# prepare data
+data[1:10,1:10]
+
+rownames(data) <- data$Geneid
+data$Geneid <- NULL
+
+#Targets creation
+
+targets <- as.data.frame(matrix(NA,length(names(data)),2))
+names(targets) <- c("sample","condition")
+targets$sample <- names(data)
+targets[1:8, 2] <- "CCC"
+targets[9:14, 2] <- "CTRL"
+targets[15:22, 2] <- "DCM"
+targets$condition <- as.factor(targets$condition)
+rownames(targets) <- targets$sample
+targets$sample <- NULL
+
+# 2. QC - outlier detection ------------------------------------------------
+# detect outlier genes
+
+gsg <- goodSamplesGenes(t(data))
+summary(gsg)
+gsg$allOK
+
+table(gsg$goodGenes)
+table(gsg$goodSamples)
+
+# remove genes that are detectd as outliers
+data <- data[gsg$goodGenes == TRUE,]
+
+# detect outlier samples - hierarchical clustering - method 1
+htree <- hclust(dist(t(data)), method = "average")
+plot(htree)
+
+
+# pca - method 2
+
+pca <- prcomp(t(data))
+pca.dat <- pca$x
+
+pca.var <- pca$sdev^2
+pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
+
+pca.dat <- as.data.frame(pca.dat)
+
+ggplot(pca.dat, aes(PC1, PC2)) +
+  geom_point() +
+  geom_text(label = rownames(pca.dat)) +
+  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
+       y = paste0('PC2: ', pca.var.percent[2], ' %'))
+
+
+# 3. Normalization ----------------------------------------------------------------------
+# create a deseq2 dataset
+
+# making the rownames and column names identical
+all(rownames(targets) %in% colnames(data))
+all(rownames(targets) == colnames(data))
+
+
+# create dds
+dds <- DESeqDataSetFromMatrix(countData = data,
+                              colData = targets,
+                              design = ~ 1) # not spcifying model
+
+
+## remove all genes with counts < 15 in more than 75% of samples
+## suggested by WGCNA on RNAseq FAQ
+
+dds75 <- dds[rowSums(counts(dds) >= 15) >= 16,]
+nrow(dds75) # 13284 genes
+
+# perform variance stabilization
+dds_norm <- vst(dds75)
+
+dds_norm_count <- assay(dds_norm)
+
+design <- model.matrix(~0 + targets$condition)
+colnames(design) <- levels(targets$condition)
+
+fit <- lmFit(dds_norm_count, design)
+contrast.matrix <- makeContrasts(CCC-DCM, levels=design)
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit2 <- eBayes(fit2)
+
+res <- topTable(fit2, adjust="fdr", number=Inf)
+
+write_xlsx(res, "DEG_total.xlsx")
+
+# get normalized counts
+norm.counts <- assay(dds_norm) %>% 
+  t()
+
+
+# 4. Network Construction  ---------------------------------------------------
+# Choose a set of soft-thresholding powers
+power <- c(c(1:10), seq(from = 12, to = 50, by = 2))
+
+# Call the network topology analysis function
+sft <- pickSoftThreshold(norm.counts,
+                         powerVector = power,
+                         networkType = "signed",
+                         verbose = 5)
+
+
+sft.data <- sft$fitIndices
+
+# visualization to pick power
+
+a1 <- ggplot(sft.data, aes(Power, SFT.R.sq, label = Power)) +
+  geom_point() +
+  geom_text(nudge_y = 0.1) +
+  geom_hline(yintercept = 0.8, color = 'red') +
+  labs(x = 'Power', y = 'Scale free topology model fit, signed R^2') +
+  theme_classic()
+
+
+a2 <- ggplot(sft.data, aes(Power, mean.k., label = Power)) +
+  geom_point() +
+  geom_text(nudge_y = 0.1) +
+  labs(x = 'Power', y = 'Mean Connectivity') +
+  theme_classic()
+
+
+grid.arrange(a1, a2, nrow = 2)
+
+# convert matrix to numeric
+norm.counts[] <- sapply(norm.counts, as.numeric)
+
+soft_power <- 10
+cor <- WGCNA::cor
+
+# memory estimate w.r.t blocksize
+bwnet <- blockwiseModules(norm.counts,
+                          maxBlockSize = 16000,
+                          TOMType = "unsigned",
+                          power = soft_power,
+                          mergeCutHeight = 0.25,
+                          numericLabels = FALSE,
+                          randomSeed = 1234,
+                          verbose = 3)
+
+
+cor<-stats::cor
+
+
+# 5. Module Eigengenes ---------------------------------------------------------
+module_eigengenes <- bwnet$MEs
+
+
+# Print out a preview
+head(module_eigengenes)
+
+
+# get number of genes for each module
+table(bwnet$colors)
+
+# Plot the dendrogram and the module colors before and after merging underneath
+pdf("Dendrogram.pdf", width = 14, height = 10)
+plotDendroAndColors(bwnet$dendrograms[[1]], cbind(bwnet$unmergedColors, bwnet$colors),
+                    c("unmerged", "merged"),
+                    dendroLabels = FALSE,
+                    addGuide = TRUE,
+                    hang= 0.03,
+                    guideHang = 0.05)
+dev.off()
+
+
+
+
+
+
+# 6A. Relate modules to traits --------------------------------------------------
+# module trait associations
+
+# binarize categorical variables
+
+targets$condition <- factor(targets$condition, levels = c("CTRL", "DCM", "CCC"))
+
+# create traits file - binarize categorical variables
+traits <- targets %>% 
+  mutate(HF = case_when(condition == "CCC" ~ 1,
+                        condition == "DCM" ~ 1,
+                        condition == "CTRL" ~ 0)) %>% dplyr::select(-condition)
+
+severity.out <- binarizeCategoricalColumns(targets$condition,
+                                           includePairwise = FALSE,
+                                           includeLevelVsAll = TRUE,
+                                           minCount = 1)
+
+
+traits <- cbind(traits, severity.out)
+
+# Define numbers of genes and samples
+nSamples <- nrow(norm.counts)
+nGenes <- ncol(norm.counts)
+
+
+module.trait.corr <- cor(module_eigengenes, traits, use = 'p')
+module.trait.corr.pvals <- corPvalueStudent(module.trait.corr, nSamples)
+
+# visualize module-trait association as a heatmap
+
+heatmap.data <- merge(module_eigengenes, traits, by = 'row.names')
+
+head(heatmap.data)
+
+heatmap.data <- heatmap.data %>% 
+  column_to_rownames(var = 'Row.names')
+
+pdf("Cor_heatmap.pdf", width = 10, height = 14)
+CorLevelPlot(heatmap.data,
+             x = names(heatmap.data)[13:15],
+             y = names(heatmap.data)[1:12],
+             col = c("blue1", "skyblue", "white", "pink", "red"))
+dev.off()
+
+module.gene.mapping <- as.data.frame(bwnet$colors)
+genes_yellow <- module.gene.mapping %>% 
+  filter(`bwnet$colors` == 'yellow') %>% 
+  rownames()
+
+
+
+#Functional analysis of yellow module
+
+new_res <- res[rownames(res) %in% genes_yellow, ]
+
+write_xlsx(new_res, "DEG_yellow_module_total.xlsx")
+
+new_res$fcSign=sign(new_res$logFC)
+new_res$logP=-log10(new_res$adj.P.Val)
+new_res$score=new_res$logP/new_res$fcSign
+new_res <- new_res[order(-new_res$score),]
+new_res <- new_res %>% rownames_to_column("gene")
+
+gene_list <- new_res$score
+names(gene_list) <- new_res$gene
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "H"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_H_table <- gsea_results@result
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C2", subcategory = "CP:REACTOME"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_REACTOME_table <- gsea_results@result
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C2", subcategory = "CP:KEGG"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_KEGG_table <- gsea_results@result
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C5", subcategory = "GO:CC"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_CC_table <- gsea_results@result
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C5", subcategory = "GO:MF"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_MF_table <- gsea_results@result
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C5", subcategory = "GO:BP"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_BP_table <- gsea_results@result
+
+GO_datasets <- rbind(gsea_results_BP_table, gsea_results_CC_table, gsea_results_MF_table)
+
+mm_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C7", subcategory = "IMMUNESIGDB"
+)
+
+gsea_results <- GSEA(
+  geneList = gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    mm_hallmark_sets,
+    gs_name,
+    ensembl_gene
+  )
+)
+
+gsea_results_IMMUNESIGDB_table <- gsea_results@result
+
+#Functional analysis of red module
+# Create a new workbook
+wb <- createWorkbook()
+
+# Add sheets to the workbook
+addWorksheet(wb, "GO")
+addWorksheet(wb, "Reactome")
+addWorksheet(wb, "IMMUNESIGDB")
+addWorksheet(wb, "KEGG")
+addWorksheet(wb, "Hallmark")
+
+# Write data to the sheets
+writeData(wb, "GO", GO_datasets)
+writeData(wb, "Reactome", gsea_results_REACTOME_table)
+writeData(wb, "IMMUNESIGDB", gsea_results_IMMUNESIGDB_table)
+writeData(wb, "KEGG", gsea_results_KEGG_table)
+writeData(wb, "Hallmark", gsea_results_H_table)
+
+# Save the workbook
+saveWorkbook(wb, "Yellow_module.xlsx", overwrite = TRUE)
+
+
+#DEG in Yellow module for PPI
+
+DEG_res <- new_res[new_res$adj.P.Val < 0.05, ]
+DEG_res <- DEG_res %>% rownames_to_column("Gene")
+DEG_res_heatmap <- DEG_res %>% column_to_rownames("gene")
+
+# Keep only the rows in dds_norm_count whose rownames match with DEG_res
+filtered_dds_norm_count <- dds_norm_count[rownames(dds_norm_count) %in% rownames(DEG_res_heatmap), ]
+
+color <- colorRampPalette((c("blue", "white", "red")))(50)
+
+
+heatmap_yellow <- pheatmap(filtered_dds_norm_count, color = color, scale = "row", show_rownames = F)
+
+save_pheatmap_pdf <- function(x, filename, width=7, height=7) {
+  stopifnot(!missing(x))
+  stopifnot(!missing(filename))
+  pdf(filename, width=width, height=height)
+  grid::grid.newpage()
+  grid::grid.draw(x$gtable)
+  dev.off()
+}
+
+save_pheatmap_pdf(heatmap_yellow, "yellow_cluster_DEG.pdf")
+
+
+#Transform to gene symbol
+
+library(biomaRt)
+# Define the BioMart object
+mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Query BioMart for the gene symbols corresponding to your Ensembl IDs
+# Here, 'Zhu_counts$Gene' refers to the column of your data frame that contains the Ensembl IDs
+# You may need to replace 'Zhu_counts$Gene' with the actual column name in your data frame
+IDs <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"),
+             filters = "ensembl_gene_id",
+             values = DEG_res$Gene,
+             mart = mart)
+
+DEG_res$GeneSymbol <- IDs$hgnc_symbol[match(DEG_res$Gene, IDs$ensembl_gene_id)]
+
+# Remove rows with NA or empty in 'GeneSymbol'
+DEG_res <- DEG_res[!is.na(DEG_res$GeneSymbol), ]
+DEG_res <- DEG_res[DEG_res$GeneSymbol != "", ]
+
+# Create a table of duplicated gene symbols
+dupes <- table(DEG_res$GeneSymbol)
+dupes <- dupes[dupes > 1]
+
+# Loop through each duplicated gene symbol
+for (gene in names(dupes)) {
+  # Get the indices of the rows with this gene symbol
+  indices <- which(DEG_res$GeneSymbol == gene)
+  
+  # Append a unique identifier to each duplicate
+  DEG_res$GeneSymbol[indices] <- paste(DEG_res$GeneSymbol[indices], "_", seq_along(indices), sep = "")
+}
+
+# Now set the rownames and remove the columns as before
+rownames(DEG_res) <- DEG_res$GeneSymbol
+DEG_res <- subset(DEG_res, select = -c(Gene, GeneSymbol))
+
+
+DEG_res <- DEG_res %>%
+  drop_na(GeneSymbol)
+
+DEG_res_final<- DEG_res_final[DEG_res_final$GeneSymbol != "", ]
+
+# Export the dataframe
+write_xlsx(DEG_res_final, "DEG_yellow.xlsx")
+
+
+# 6B. Intramodular analysis: Identifying driver genes ---------------
+
+
+
+# Calculate the module membership and the associated p-values
+
+# The module membership/intramodular connectivity is calculated as the correlation of the eigengene and the gene expression profile. 
+# This quantifies the similarity of all genes on the array to every module.
+
+module.membership.measure <- cor(module_eigengenes, norm.counts, use = 'p')
+module.membership.measure.pvals <- corPvalueStudent(module.membership.measure, nSamples)
+
+
+module.membership.measure.pvals[1:10,1:10]
+
+# Calculate the gene significance and associated p-values
+
+gene.signf.corr <- cor(norm.counts, traits$data.CCC.vs.all, use = 'p')
+gene.signf.corr.pvals <- corPvalueStudent(gene.signf.corr, nSamples)
+
+gene.signf.corr.pvals %>% 
+  as.data.frame() %>% 
+  arrange(V1) %>% 
+  head(25)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#########################################
+
+BiocManager::install("dorothea")
+
+#decoupleR
+library(OmnipathR)
+library(decoupleR)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(ggplot2)
+library(pheatmap)
+library(ggrepel)
+
+library(progeny)
+library(dorothea)
+library(CARNIVAL)
+
+deg <- res %>%
+  dplyr::select(logFC, t, P.Value) %>% 
+  filter(!is.na(t))
+
+deg <- deg %>% rownames_to_column("Gene")
+
+IDs <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"),
+             filters = "ensembl_gene_id",
+             values = deg$Gene,
+             mart = mart)
+
+deg$GeneSymbol <- IDs$hgnc_symbol[match(deg$Gene, IDs$ensembl_gene_id)]
+
+# Remove rows with NA or empty in 'GeneSymbol'
+deg <- deg[!is.na(deg$GeneSymbol), ]
+deg <- deg[deg$GeneSymbol != "", ]
+
+# Create a table of duplicated gene symbols
+dupes <- table(deg$GeneSymbol)
+dupes <- dupes[dupes > 1]
+
+# Loop through each duplicated gene symbol
+for (gene in names(dupes)) {
+  # Get the indices of the rows with this gene symbol
+  indices <- which(deg$GeneSymbol == gene)
+  
+  # Append a unique identifier to each duplicate
+  deg$GeneSymbol[indices] <- paste(deg$GeneSymbol[indices], "_", seq_along(indices), sep = "")
+}
+
+# Now set the rownames and remove the columns as before
+deg <- subset(deg, select = -Gene)
+deg <- rename(deg, Gene = GeneSymbol)
+deg_processed <- deg %>% dplyr::select(Gene, everything())
+
+rownames(deg_processed) <- deg_processed$Gene
+deg_processed$Gene <- NULL
+deg_tf <- as.matrix(deg_processed)
+
+
+
+net <- get_collectri(organism='human', split_complexes=FALSE)
+
+deg$GeneSymbol <- IDs$hgnc_symbol[match(deg$Gene, IDs$ensembl_gene_id)]
+
+#Visualization
+n_tfs <- 25
+
+
+
+
+# Run ulm
+contrast_acts <- run_ulm(mat=deg_tf[, 't', drop=FALSE], net=net, .source='source', .target='target',
+                         .mor='mor', minsize = 5)
+
+
+# Filter top TFs in both signs
+f_contrast_acts <- contrast_acts %>%
+  mutate(rnk = NA)
+msk <- f_contrast_acts$score > 0
+f_contrast_acts[msk, 'rnk'] <- rank(-f_contrast_acts[msk, 'score'])
+f_contrast_acts[!msk, 'rnk'] <- rank(-abs(f_contrast_acts[!msk, 'score']))
+tfs <- f_contrast_acts %>%
+  arrange(rnk) %>%
+  head(n_tfs) %>%
+  pull(source)
+f_contrast_acts <- f_contrast_acts %>%
+  filter(source %in% tfs)
+
+# Plot
+pdf("TF_plot.pdf", width = 14, height = 10)
+ggplot(f_contrast_acts, aes(x = reorder(source, score), y = score)) + 
+  geom_bar(aes(fill = score), stat = "identity") +
+  scale_fill_gradient2(low = "darkblue", high = "indianred", 
+                       mid = "whitesmoke", midpoint = 0) + 
+  theme_minimal() +
+  theme(axis.title = element_text(face = "bold", size = 12),
+        axis.text.x = 
+          element_text(angle = 45, hjust = 1, size =10, face= "bold"),
+        axis.text.y = element_text(size =10, face= "bold"),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) +
+  xlab("Pathways")
+dev.off()
+
+
+
+net <- get_progeny(organism = 'human', top = 500)
+
+contrast_acts <- run_mlm(mat=deg_tf[, 't', drop=FALSE], net=net, .source='source', .target='target',
+                         .mor='weight', minsize = 5)
+
+# Plot
+pdf("pathway_plot.pdf", width = 14, height = 10)
+ggplot(contrast_acts, aes(x = reorder(source, score), y = score)) + 
+  geom_bar(aes(fill = score), stat = "identity") +
+  scale_fill_gradient2(low = "darkblue", high = "indianred", 
+                       mid = "whitesmoke", midpoint = 0) + 
+  theme_minimal() +
+  theme(axis.title = element_text(face = "bold", size = 12),
+        axis.text.x = 
+          element_text(angle = 45, hjust = 1, size =10, face= "bold"),
+        axis.text.y = element_text(size =10, face= "bold"),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()) +
+  xlab("Pathways")
+dev.off()
+
+
+# Ecotyper plots
+
+## B cells
+
+B.cells_Cell_State_Abundance <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/B.cells/B.cells_Cell_State_Abundance.txt")
+
+B.cells_Cell_State_Abundance <- B.cells_Cell_State_Abundance %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+B.cells_Cell_State_Abundance <- B.cells_Cell_State_Abundance %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Classical naïve B-cell",
+      S02 = "Unknown B-cell (S02)",
+      S03 = "Normal-enriched B-cell",
+      S04 = "Activated B-cell (S04)",
+      S05 = "Activated B-cell (S05)"
+    )
+  )
+
+# Extract the group identifier from the ID
+B.cells_Cell_State_Abundance$Group <- sub("(\\w+).*", "\\1", B.cells_Cell_State_Abundance$ID)
+B.cells_Cell_State_Abundance$Group <- gsub("[0-9]", "", B.cells_Cell_State_Abundance$Group)
+
+b_cells_box_plot <- ggplot(B.cells_Cell_State_Abundance, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("Abundance by Cell State and Group") +
+  xlab("Cell State") +
+  ylab("Abundance")
+
+
+
+# Assuming B.cells_Cell_State_Abundance is your data frame
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(B.cells_Cell_State_Abundance$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- B.cells_Cell_State_Abundance %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.0001 | p_value_CTRL_adjusted < 0.0001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- B.cells_Cell_State_Abundance %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("b_cell_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("B Cells") +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+## TCD4 Cells
+
+CD4.T.cells_Cell_State_Abundance <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/CD4.T.cells/CD4.T.cells_Cell_State_Abundance.txt")
+
+CD4.T.cells_Cell_State_Abundance <- CD4.T.cells_Cell_State_Abundance %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+CD4.T.cells_Cell_State_Abundance <- CD4.T.cells_Cell_State_Abundance %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Exhausted/effector memory/Treg",
+      S02 = "Naïve/central memory CD4+ T cells",
+      S03 = "Unknown T-CD4 Cell (S03)",
+      S04 = "Resting (normal-enriched)",
+      S05 = "Unknown (S05)",
+      S06 = "Unknown (S06)",
+      S07 = "Unknown (S07)"
+    )
+  )
+
+# Extract the group identifier from the ID
+CD4.T.cells_Cell_State_Abundance$Group <- sub("(\\w+).*", "\\1", CD4.T.cells_Cell_State_Abundance$ID)
+CD4.T.cells_Cell_State_Abundance$Group <- gsub("[0-9]", "", CD4.T.cells_Cell_State_Abundance$Group)
+
+ggplot(CD4.T.cells_Cell_State_Abundance, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("Abundance by Cell State and Group") +
+  xlab("Cell State") +
+  ylab("Abundance")
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(CD4.T.cells_Cell_State_Abundance$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- CD4.T.cells_Cell_State_Abundance %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.0001 | p_value_CTRL_adjusted < 0.0001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- CD4.T.cells_Cell_State_Abundance %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("CD4_cell_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("CD4+ T cells") +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+#T CD8
+
+CD8.T.cells_Cell_State_Abundance <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/CD8.T.cells/CD8.T.cells_Cell_State_Abundance.txt")
+
+CD8.T.cells_Cell_State_Abundance <- CD8.T.cells_Cell_State_Abundance %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+CD8.T.cells_Cell_State_Abundance <- CD8.T.cells_Cell_State_Abundance %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Naïve/central memory CD8+ T cells",
+      S02 = "Late-stage differentiated effector CD8+ T cells",
+      S03 = "Exhausted/effector memory CD8+ T cells"
+    )
+  )
+
+# Extract the group identifier from the ID
+CD8.T.cells_Cell_State_Abundance$Group <- sub("(\\w+).*", "\\1", CD8.T.cells_Cell_State_Abundance$ID)
+CD8.T.cells_Cell_State_Abundance$Group <- gsub("[0-9]", "", CD8.T.cells_Cell_State_Abundance$Group)
+
+ggplot(CD8.T.cells_Cell_State_Abundance, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("Abundance by Cell State and Group") +
+  xlab("Cell State") +
+  ylab("Abundance")
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(CD8.T.cells_Cell_State_Abundance$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- CD8.T.cells_Cell_State_Abundance %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.0001 | p_value_CTRL_adjusted < 0.0001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- CD8.T.cells_Cell_State_Abundance %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("CD8_cell_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~ Cell_State) +
+  ggtitle("CD8+ T cells") +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+
+#DC
+
+DC <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/Dendritic.cells/Dendritic.cells_Cell_State_Abundance.txt")
+
+DC <- DC %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+DC <- DC %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Myeloid cDC1",
+      S02 = "Myeloid cDC2-B (Inflammatory)",
+      S03 = "Mature immunogenic DC",
+      S04 = "Unknown (S04)",
+      S05 = "Mature (normal-enriched) DC",
+      S06 = "Langerhans-like DC",
+      S07 = "Migratory activated DC",
+      S08 = "Unknown (S08)",
+    )
+  )
+
+# Extract the group identifier from the ID
+DC$Group <- sub("(\\w+).*", "\\1", DC$ID)
+DC$Group <- gsub("[0-9]", "", DC$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(DC$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- DC %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- DC %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("DC_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("Myeloid cDC1") +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+
+
+# Fibroblasts
+
+Fibroblasts <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/Fibroblasts/Fibroblasts_Cell_State_Abundance.txt")
+
+Fibroblasts <- Fibroblasts %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+Fibroblasts <- Fibroblasts %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Myofibroblast-like Fibroblast",
+      S02 = "CAF2",
+      S03 = "CAF1",
+      S04 = "Migratory-like Fibroblast",
+      S05 = "Unknown (S05)",
+      S06 = "Unknown (S06)",
+      S08 = "Pro-migratory-like Fibroblast",
+    )
+  )
+
+# Extract the group identifier from the ID
+Fibroblasts$Group <- sub("(\\w+).*", "\\1", Fibroblasts$ID)
+Fibroblasts$Group <- gsub("[0-9]", "", Fibroblasts$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(Fibroblasts$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- Fibroblasts %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- Fibroblasts %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("Fibroblasts_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("Unknown (S05) Fibroblasts") +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+
+# Masts
+
+Masts <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/Mast.cells/Mast.cells_Cell_State_Abundance.txt")
+
+Masts <- Masts %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+Masts <- Masts %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Normal-enriched Mast Cell (S01)",
+      S02 = "Normal-enriched Mast Cell (S02)",
+      S03 = "Unknown (S03)",
+      S04 = "Classical Mast Cell",
+      S05 = "Unknown (S05)",
+      S06 = "Activated Mast Cell"
+    )
+  )
+
+# Extract the group identifier from the ID
+Masts$Group <- sub("(\\w+).*", "\\1", Masts$ID)
+Masts$Group <- gsub("[0-9]", "", Masts$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(Masts$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- Masts %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- Masts %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+
+
+# NK
+
+NK <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/NK.cells/NK.cells_Cell_State_Abundance.txt")
+
+NK <- NK %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+NK <- NK %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Classical NK",
+      S02 = "Normal-enriched NK",
+      S03 = "Unknown (S03)",
+      S04 = "Unknown (S04)",
+      S05 = "Unknown (S05)"
+    )
+  )
+
+# Extract the group identifier from the ID
+NK$Group <- sub("(\\w+).*", "\\1", NK$ID)
+NK$Group <- gsub("[0-9]", "", NK$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(NK$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- NK %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- NK %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("NK_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("Classical NK") +
+  facet_wrap(~ Cell_State) +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+# Macro
+
+Macro <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/Monocytes.and.Macrophages/Monocytes.and.Macrophages_Cell_State_Abundance.txt")
+
+Macro <- Macro %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+Macro <- Macro %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Monocytes",
+      S02 = "Classical M0",
+      S03 = "Classical M1",
+      S04 = "Classical M2",
+      S05 = "M2-like",
+      S06 = "M2 foam cell-like",
+      S07 = "M2-like proliferative",
+      S08 = "Proliferative Macrophage",
+      S09 = "UMacronown (S09)",
+    )
+  )
+
+# Extract the group identifier from the ID
+Macro$Group <- sub("(\\w+).*", "\\1", Macro$ID)
+Macro$Group <- gsub("[0-9]", "", Macro$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(Macro$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- Macro %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- Macro %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("Macro_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("Monocytes/Macrophages") +
+  facet_wrap(~ Cell_State) +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+# PMN
+
+PMN <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/PMNs/PMNs_Cell_State_Abundance.txt")
+
+PMN <- PMN %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+PMN <- PMN %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Differentiating Neutrophils",
+      S02 = "Activated Neutrophils",
+      S03 = "Classical activated Neutrophils"
+    )
+  )
+
+# Extract the group identifier from the ID
+PMN$Group <- sub("(\\w+).*", "\\1", PMN$ID)
+PMN$Group <- gsub("[0-9]", "", PMN$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(PMN$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- PMN %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- PMN %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("PMN_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("PMN") +
+  facet_wrap(~ Cell_State) +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()
+
+
+
+# PC
+
+PC <- read.delim("~/PhD Heidelberg/Projects/New_chagas/WGCNA/ecotyper_output_carcinoma/Carcinoma_Cell_States/PCs/PCs_Cell_State_Abundance.txt")
+
+PC <- PC %>%
+  pivot_longer(
+    cols = starts_with("S"), # Columns to gather
+    names_to = "Cell_State", # Name of new 'key' column
+    values_to = "Abundance"  # Name of new 'value' column
+  )
+
+PC <- PC %>%
+  mutate(
+    Cell_State = recode(
+      Cell_State,
+      S01 = "Classical Plasma Cells",
+      S02 = "Unknown (S02)",
+      S03 = "Unknown (S03)",
+      S04 = "Unknown (S04)",
+      S05 = "Normal-enriched Plasma Cells",
+      S06 = "Unknown (S06)"
+    )
+  )
+
+# Extract the group identifier from the ID
+PC$Group <- sub("(\\w+).*", "\\1", PC$ID)
+PC$Group <- gsub("[0-9]", "", PC$Group)
+
+# Initialize an empty data frame to store the results
+results <- data.frame()
+
+# Loop through each unique Cell_State
+for (cell_state in unique(PC$Cell_State)) {
+  
+  # Filter data for the current Cell_State
+  filtered_data <- PC %>%
+    filter(Cell_State == cell_state)
+  
+  # Perform t-tests comparing sevCCC against DCM and CTRL
+  t_test_DCM <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "DCM"))
+  t_test_CTRL <- t.test(Abundance ~ Group, data = filtered_data, subset = Group %in% c("sevCCC", "CTRL"))
+  
+  # Store the results
+  results <- rbind(results, data.frame(
+    Cell_State = cell_state,
+    p_value_DCM = t_test_DCM$p.value,
+    p_value_CTRL = t_test_CTRL$p.value
+  ))
+}
+
+# Adjust p-values for multiple comparisons using BH method
+results$p_value_DCM_adjusted <- p.adjust(results$p_value_DCM, method = "BH")
+results$p_value_CTRL_adjusted <- p.adjust(results$p_value_CTRL, method = "BH")
+
+# Identify significant differences
+results$significant_DCM <- ifelse(results$p_value_DCM_adjusted < 0.001, "Yes", "No")
+results$significant_CTRL <- ifelse(results$p_value_CTRL_adjusted < 0.001, "Yes", "No")
+
+# Show the final results
+print(results)
+
+# Filter the results to get the significant Cell_State categories
+significant_cell_states <- results %>%
+  filter(p_value_DCM_adjusted < 0.001 | p_value_CTRL_adjusted < 0.001) %>%
+  dplyr::select(Cell_State)
+
+# Extract the significant Cell_State categories as a vector
+significant_cell_states_vector <- pull(significant_cell_states, Cell_State)
+
+# Filter the original data
+filtered_data <- PC %>%
+  filter(Cell_State %in% significant_cell_states_vector)
+
+png("PC_plot.png", units="in", width = 14, height = 10, res=900)
+ggplot(filtered_data, aes(x = Group, y = Abundance, fill = Group)) +
+  geom_boxplot() +
+  ggtitle("PC") +
+  facet_wrap(~ Cell_State) +
+  xlab("") +
+  ylab("Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_classic()
+dev.off()

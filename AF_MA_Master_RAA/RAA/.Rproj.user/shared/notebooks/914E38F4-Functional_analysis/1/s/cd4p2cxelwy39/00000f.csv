@@ -1,0 +1,2 @@
+"0","resAll$HG$AUC <- log10(resAll$HG$E) - 0.5"
+"0","ggPanelplot(resAll)"

@@ -1,0 +1,2 @@
+"0","# display a STRING network png with the ""halo"""
+"0","string_db$plot_network(hits, payload_id=payload_id)"

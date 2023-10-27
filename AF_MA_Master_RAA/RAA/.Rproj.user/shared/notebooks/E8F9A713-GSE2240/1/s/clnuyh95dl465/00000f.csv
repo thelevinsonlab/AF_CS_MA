@@ -1,0 +1,203 @@
+"0","#Libraries"
+"0","library(GEOquery)"
+"2","Lade nötiges Paket: Biobase
+"
+"2","Lade nötiges Paket: BiocGenerics
+"
+"2","
+Attache Paket: ‘BiocGenerics’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:gridExtra’:
+
+    combine
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:lubridate’:
+
+    intersect, setdiff, union
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:dplyr’:
+
+    combine, intersect, setdiff, union
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind, colnames, dirname, do.call,
+    duplicated, eval, evalq, Filter, Find, get, grep, grepl, intersect, is.unsorted, lapply, Map,
+    mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int, Position, rank, rbind,
+    Reduce, rownames, sapply, setdiff, sort, table, tapply, union, unique, unsplit, which.max,
+    which.min
+
+"
+"2","Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with 'browseVignettes()'. To cite Bioconductor,
+    see 'citation(""Biobase"")', and for packages 'citation(""pkgname"")'.
+
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"2","Setting options('download.file.method.GEOquery'='auto')
+"
+"2","Setting options('GEOquery.inmemory.gpl'=FALSE)
+"
+"0","library(umap)"
+"0","library(dplyr)"
+"0","library(hgu133a.db)"
+"2","Lade nötiges Paket: AnnotationDbi
+"
+"2","Lade nötiges Paket: stats4
+"
+"2","Lade nötiges Paket: IRanges
+"
+"2","Lade nötiges Paket: S4Vectors
+"
+"2","
+Attache Paket: ‘S4Vectors’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:lubridate’:
+
+    second, second<-
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:dplyr’:
+
+    first, rename
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:tidyr’:
+
+    expand
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    expand.grid, I, unname
+
+"
+"2","
+Attache Paket: ‘IRanges’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:lubridate’:
+
+    %within%
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:dplyr’:
+
+    collapse, desc, slice
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:purrr’:
+
+    reduce
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:grDevices’:
+
+    windows
+
+"
+"2","
+Attache Paket: ‘AnnotationDbi’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    select
+
+"
+"2","Lade nötiges Paket: org.Hs.eg.db
+"
+"2","
+"
+"2","
+"
+"0","library(tidyverse)"
+"0","library(limma)"
+"2","
+Attache Paket: ‘limma’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:BiocGenerics’:
+
+    plotMA
+
+"
+"0","library(annotate)"
+"2","Lade nötiges Paket: XML
+"
+"0","library(hugene11sttranscriptcluster.db)"
+"2","
+"
+"0","library(oligo)"
+"2","Lade nötiges Paket: oligoClasses
+"
+"2","Welcome to oligoClasses version 1.60.0
+"
+"2","Lade nötiges Paket: Biostrings
+"
+"2","Lade nötiges Paket: XVector
+"
+"2","
+Attache Paket: ‘XVector’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:purrr’:
+
+    compact
+
+"
+"2","Lade nötiges Paket: GenomeInfoDb
+"
+"2","
+Attache Paket: ‘Biostrings’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:grid’:
+
+    pattern
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:base’:
+
+    strsplit
+
+"
+"2","=================================================================================================================
+"
+"2","Welcome to oligo version 1.62.2
+"
+"2","=================================================================================================================
+"
+"2","
+Attache Paket: ‘oligo’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:limma’:
+
+    backgroundCorrect
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:lubridate’:
+
+    pm
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    summarize
+
+"

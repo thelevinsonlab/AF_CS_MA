@@ -1,0 +1,5 @@
+"0","# Get the names of the studies from the list"
+"0","study_names <- names(AF_Meta)"
+"0",""
+"0","# Create a data frame with the names of the studies"
+"0","ids <- data.frame(Study = study_names)"

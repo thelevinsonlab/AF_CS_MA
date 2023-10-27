@@ -1,0 +1,6 @@
+"0","# Finally, we will generate a plot of the first two principal components of the combined datasets, color-coded by the study and the condition (AF vs. SR). A box plot is also created to show the distribution of the first two principal components for the two conditions."
+"0",""
+"0","pca_meta_sum_scale = readRDS(file = ""data/figure_objects/gcentered_PCA_sum.rds"")"
+"0","pca_plot_df_scale = pca_meta_sum_scale$plot_df"
+"0",""
+"0","pcs_data = readRDS(file = ""data/figure_objects/gcentered_PCs_sum.rds"")"

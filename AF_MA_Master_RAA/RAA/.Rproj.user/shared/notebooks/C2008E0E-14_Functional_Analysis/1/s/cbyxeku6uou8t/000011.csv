@@ -1,0 +1,5 @@
+"0","# Run ULM to identify relevant transcription factors (TFs)"
+"0","contrast_acts_tf <- run_ulm(mat=CS_rank[, 'mean_t', drop=FALSE], net=net, .source='source', .target='target',"
+"0","                  .mor='mor', minsize = 5)"
+"0",""
+"0","contrast_acts_tf <- contrast_acts_tf[order(contrast_acts_tf$p_value),]"

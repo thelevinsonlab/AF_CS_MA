@@ -1,0 +1,53 @@
+"","Chemical Name","Gene","Value"
+"1","Acetaminophen","C1QB",1
+"2","Acetaminophen","C1QC",1
+"3","Acetaminophen","CACNA1G",1
+"4","Acetaminophen","COG3",1
+"5","Acetaminophen","COG6",1
+"6","Acetaminophen","COPG1",1
+"7","Acetaminophen","KDELR3",1
+"8","Acetaminophen","SEC31A",1
+"9","Acetaminophen","TNNI1",1
+"10","Calcitriol","C1QB",1
+"11","Calcitriol","C1QC",1
+"12","Calcitriol","KDELR3",1
+"13","Clofibrate","C1QB",1
+"14","Clofibrate","COPG1",1
+"15","Clofibrate","SEC31A",1
+"16","Estradiol","C1QB",1
+"17","Estradiol","C1QC",1
+"18","Estradiol","CACNA1G",1
+"19","Estradiol","COG3",1
+"20","Estradiol","KDELR3",1
+"21","Estradiol","TNNI1",1
+"22","Folic Acid","C1QB",1
+"23","Folic Acid","CACNA1G",1
+"24","Folic Acid","COG3",1
+"25","Folic Acid","COG6",1
+"26","Folic Acid","COPG1",1
+"27","Folic Acid","KDELR3",1
+"28","Folic Acid","SEC31A",1
+"29","pirinixic acid","C1QB",1
+"30","pirinixic acid","C1QC",1
+"31","pirinixic acid","COG3",1
+"32","pirinixic acid","COPG1",1
+"33","pirinixic acid","KDELR3",1
+"34","pirinixic acid","TNNI1",1
+"35","Pravastatin","C1QB",1
+"36","Pravastatin","C1QC",1
+"37","Resveratrol","C1QB",1
+"38","Resveratrol","C1QC",1
+"39","Resveratrol","COG3",1
+"40","Resveratrol","COG6",1
+"41","Resveratrol","KDELR3",1
+"42","Resveratrol","SEC31A",1
+"43","Resveratrol","TNNI1",1
+"44","Tretinoin","KDELR3",1
+"45","Tretinoin","SEC31A",1
+"46","Valproic Acid","C1QC",1
+"47","Valproic Acid","CACNA1G",1
+"48","Valproic Acid","COG3",1
+"49","Valproic Acid","COG6",1
+"50","Valproic Acid","KDELR3",1
+"51","Valproic Acid","SEC31A",1
+"52","Valproic Acid","TNNI1",1

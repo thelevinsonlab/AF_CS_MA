@@ -1,0 +1,12 @@
+[2023-08-28 02:53:29] [INFO]    [OmnipathR] Welcome to OmnipathR!
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 02:53:29] [INFO]    [OmnipathR] Initialized cache: `C:\Users\sergi\AppData\Local\cache\OmnipathR`.
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/db/db_def.json` (encoding: UTF-8).
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/magic_bytes.json` (encoding: UTF-8).
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/urls.json` (encoding: UTF-8).
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/id_types.json` (encoding: UTF-8).
+[2023-08-28 02:53:29] [TRACE]   [OmnipathR] JSON validation successful: TRUE

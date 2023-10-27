@@ -1,0 +1,7 @@
+"0","#loading the dictionary"
+"0","load(""data_processing/tools/dictionaryIDs.ro"")"
+"0","sample = readRDS(""data/sample_sizes.rds"")%>% "
+"0","  as_tibble() %>% "
+"0","  mutate(study = as.character(study))"
+"0","Experiments = dictionary$newID"
+"0","AF_Meta  = readRDS(""data/AF_Meta.rds"")"

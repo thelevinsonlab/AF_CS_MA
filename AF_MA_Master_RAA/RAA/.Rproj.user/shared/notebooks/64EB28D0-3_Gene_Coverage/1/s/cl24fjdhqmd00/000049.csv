@@ -1,0 +1,2 @@
+"0","grid.text(paste0(""Mean Jaccard Index ~ "", round(mean_jaccard, 2)), x = 0.8, y = 0.85, "
+"0","          just = ""center"", gp = gpar(fontsize = 14, col = ""black""))"

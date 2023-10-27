@@ -1,0 +1,20 @@
+"0","ggplot(plot_data_long, aes(x = Study, y = Count, fill = Condition)) +
+    geom_bar(stat = ""identity"", position = ""stack"") +
+    coord_flip() +
+    labs(x = ""Study"", y = ""Number of Patients"", title = ""Number of Patients per Study (AF and SR)"") +
+    theme_classic() +
+    scale_fill_manual(values = c(""AF"" = ""#0072B2"", ""SR"" = ""#E69F00""))
+
+# Save the plot
+ggsave(""sample_plot.png"", plot = sample_plot, width = 4, height = 8, dpi = 600)
+"
+"1","[1m[33mError[39m in `geom_bar()`:[22m
+[38;5;232m[33m![38;5;232m Problem while computing aesthetics.
+[36mℹ[38;5;232m Error occurred in the 1st layer.[39m
+[1mCaused by error in `tapply()`:[22m
+[33m![39m argument ""X"" is missing, with no default
+Backtrace:
+[90m  1. [39mggplot2::ggsave(...)
+[90m 22. [39m[1mstats[22m:::reorder.default(First.author.name)
+[90m 23. [39m[1mbase[22m::tapply(X = X, INDEX = x, FUN = FUN, ...)
+"

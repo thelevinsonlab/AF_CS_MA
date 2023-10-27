@@ -1,0 +1,4 @@
+"0","data <- read_excel(""C:/Users/sergi/Downloads/LVAD_final.xlsx"")"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

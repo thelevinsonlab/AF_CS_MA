@@ -1,0 +1,8 @@
+"0","AF_Meta = readRDS(file = ""data/AF_Meta.rds"") #main object"
+"0","experiments = names(AF_Meta)"
+"0","names(experiments) = experiments"
+"0",""
+"0","# For labeling"
+"0","experiment_size = sort(unlist(lapply(AF_Meta,"
+"0","                                     function(x) ncol(x$GEX))),"
+"0","                       decreasing = T)"

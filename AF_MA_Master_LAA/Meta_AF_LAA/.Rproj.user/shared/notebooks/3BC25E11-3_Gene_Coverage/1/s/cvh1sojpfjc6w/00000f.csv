@@ -1,0 +1,4 @@
+"0","summary_concordance = jaccard_res_all %>% "
+"0","  dplyr::filter(StudyA != StudyB) %>% "
+"0","  group_by(StudyA) %>%"
+"0","  summarise(mean(JaccardIx))"

@@ -1,0 +1,4 @@
+"0","# We then create a unified dataset that includes all the gene expression data from the different studies."
+"0","meta_gex_scale = get_complete_gex_AF(meta_list = AF_Meta,"
+"0","                                  complete_targets = meta_targets,"
+"0","                                  gex_key = ""GEX_norm"")"

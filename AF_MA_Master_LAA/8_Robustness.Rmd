@@ -1,0 +1,136 @@
+---
+title: "8_Robustness"
+output: html_document
+date: "2023-02-26"
+---
+# 1. Loading Packages and Functions
+```{r}
+library(tidyverse)
+library(cowplot)
+
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Main data object importing
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+# 3. Preprocessing Data
+```{r}
+experiments = names(AF_Meta)
+names(experiments) = experiments
+```
+
+# 4. Calculation of t-statistics
+```{r}
+t_matrix = get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "t")
+```
+
+# 5. Robustness of disease score
+```{r}
+n_genes = c(50,100,200,500,1000)
+names(n_genes) = n_genes
+
+pairwise_auc = lapply(n_genes, pairwise_ds_AF, 
+                      experiments = experiments,
+                      meta_list = AF_Meta,
+                      t_matrix = t_matrix) 
+
+pairwise_auc = enframe(pairwise_auc,name = "n_genes") %>% unnest()
+
+saveRDS(pairwise_auc, file =  "data/figure_objects/robust_ds.rds")
+```
+# 6. Robustness of Enrichment Score
+```{r}
+pairwise_es_res = lapply(n_genes, pairwise_ES_AF,
+                      meta_list = AF_Meta) 
+
+pairwise_es_res = enframe(pairwise_es_res,
+                          name = "n_genes") %>% unnest()
+
+saveRDS(pairwise_es_res, file =  "data/figure_objects/robust_es.rds")
+```
+
+# 7. Data Visualization
+```{r}
+experiment_size = sort(unlist(lapply(AF_Meta,
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+
+# 1. Disease score
+
+pairwise_auc = readRDS(file = "data/figure_objects/robust_ds.rds")
+
+pairwise_auc = filter(pairwise_auc, PredictorExperiment!=PredictedExperiment)
+
+# Defining a custom theme
+my_theme <- theme(axis.title = element_text(size=12),
+                  axis.text = element_text(size=12),
+                  panel.background = element_blank(),
+                  panel.grid = element_blank(),
+                  panel.border = element_rect(colour = "black", 
+                                              fill=NA, size=1))
+
+pairwise_plot = ggplot(pairwise_auc, aes(x = factor(n_genes,
+                                                    levels = c("50","100","200",
+                                                               "500","1000")),
+                                         y = single,
+                                         color = PredictorExperiment)) +
+  stat_boxplot() + 
+  my_theme +
+  xlab("Number of genes in classifier") +
+  ylab("AUC of Disease Score") + labs(color = "Predictor")
+```
+
+```{r}
+# 2. Enrichment score
+
+pairwise_es_res= readRDS(file =  "data/figure_objects/robust_es.rds")
+
+pairwise_es_res = filter(pairwise_es_res, 
+                         Reference!=DEG) %>%
+                  mutate(direction = factor(direction,
+                                            levels = c("up","down")))
+
+pairwise_plot_es = ggplot(pairwise_es_res, aes(factor(n_genes,
+                                                      levels = c("50","100","200",
+                                                                 "500","1000")),
+                                         y = ES,
+                                         color = factor(DEG,
+                                                        levels = names(experiment_size)))) +
+  stat_boxplot() + 
+  my_theme +
+  xlab("Number of Differentially Expressed Genes (DEGs) Selected") +
+  ylab("Enrichment Score in background experiments") +
+  facet_grid(direction ~.) + labs(color = "DEG")
+
+# Joint figure
+pdf("data/figures/sup/SupplementalFigure10.pdf",
+    width = 16,
+    height = 8)
+
+plot(plot_grid(pairwise_plot,pairwise_plot_es, 
+          nrow = 1,rel_widths = c(1,1),labels = c("A","B")))
+
+dev.off()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

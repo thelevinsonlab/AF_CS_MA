@@ -1,0 +1,71 @@
+"0","#Tabla resumen"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","my_controls <- tableby.control("
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  test = T,"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  total = T,"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  numeric.test = ""kwt"", cat.test = ""chisq"","
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  numeric.stats = c(""meansd"", ""medianq1q3"", ""range"", ""Nmiss2""),"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  cat.stats = c(""countpct"", ""Nmiss2""),"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  stats.labels = list("
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","    meansd = ""Mean (SD)"","
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","    medianq1q3 = ""Median (Q1, Q3)"","
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","    range = ""Min - Max"","
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","    Nmiss2 = ""Missing"""
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  )"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0",")"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","table_two <- tableby(muerte ~ edad + sexo + hta +	dm +	erc +	htp +	infarto +	acv +	tabaquismo +	alcohol +	hipotiroidismo +	cancer +	peso +	talla +	imc +	etiologia +	dispositivos +	causa_implante +	dispositivo +	intermacs +	uci_dias +	hosp_dias +	falla_derecha +	transfusion +	reintervencion +	infeccion_device +	acv_isquemico + 	acv_hemorragico +	trombosis_bomba +	torcion_outflow +	hosp_falla +	num_hosp_falla +	hosp_otros +	causa_hosp_otros +	trasplante +	causa_trasplante +	muerte +	causa_muerte + seguimiento_dias,"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  data = data,"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","  control = my_controls"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0",")"
+"2","Error in eval(predvars, data, env) : object 'edad' not found
+"

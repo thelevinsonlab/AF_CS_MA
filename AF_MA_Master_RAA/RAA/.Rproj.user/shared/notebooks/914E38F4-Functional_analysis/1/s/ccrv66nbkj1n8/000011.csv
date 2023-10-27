@@ -1,0 +1,2 @@
+"0","sel <- msig$gs$gs_cat == ""C5"""
+"0","cerno_c5 <- tmodCERNOtest(LAA_DE_genes$gene, mset = msig[sel])"

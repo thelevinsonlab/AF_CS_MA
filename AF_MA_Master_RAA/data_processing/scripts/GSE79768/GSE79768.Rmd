@@ -1,0 +1,69 @@
+---
+title: "GSE79768"
+output: html_document
+date: "2022-12-21"
+---
+
+```{r}
+#Libraries
+library(GEOquery)
+library(umap)
+library(dplyr)
+library(hgu133plus2.db)
+library(tidyverse)
+library(limma)
+library(annotate)
+library(oligo)
+```
+
+
+```{r}
+#File import and processing
+allfiles <- list.files("C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data")
+CELfiles <- paste("C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/",sort(allfiles[grep(".CEL",allfiles)]),sep="")
+AF_expr <- read.celfiles(CELfiles)
+AF_exprnorm <- rma(AF_expr)
+AF_expr_mat <- exprs(AF_exprnorm)
+
+#Gene Names
+genesymbols <- getSYMBOL(as.character(rownames(AF_expr_mat)), "hgu133plus2.db")
+AF_expr_mat <- AF_expr_mat[!is.na(genesymbols),]
+rownames(AF_expr_mat) <- genesymbols[!is.na(genesymbols)]
+
+AF_expr_df <- as.data.frame(AF_expr_mat)
+```
+
+```{r}
+#Targets creation
+
+targets <- as.data.frame(matrix(NA,length(names(AF_expr_df)),2))
+names(targets) <- c("sample","condition")
+targets$sample <- names(AF_expr_df)
+targets$condition = str_sub(targets$sample, start = 9, end = 10)
+GSE79768_targets <- targets %>% mutate(condition = case_when(
+  condition > 97 | condition < 10 ~ "SR",
+  condition < 97 | condition > 10 ~ "AF"))
+
+save(GSE79768_targets, file = "./GSE79768_targets.ro")
+```
+
+```{r}
+#### Complete preproc ####
+## mean by same probeset
+GENENAMES = rownames(AF_expr_mat)
+AF_dataframe = data.frame(AF_expr_mat,stringsAsFactors = F) %>% mutate(ID = GENENAMES)
+AF_dataframe = aggregate(x = AF_dataframe[, 1:ncol(AF_expr_mat)], 
+                         by = list(ID = AF_dataframe$ID), 
+                         FUN = "mean", na.rm = T)
+
+AF_expr_mat = as.matrix(AF_dataframe[,2:ncol(AF_dataframe)])
+rownames(AF_expr_mat) = AF_dataframe$ID
+
+
+colnames(AF_expr_mat) = unlist(lapply(strsplit(colnames(AF_expr_mat),"_"), 
+                                      function(x) x[1]))
+
+GSE79768_counts = AF_expr_mat
+        
+save(GSE79768_counts, file = "./GSE79768_counts.ro")
+```

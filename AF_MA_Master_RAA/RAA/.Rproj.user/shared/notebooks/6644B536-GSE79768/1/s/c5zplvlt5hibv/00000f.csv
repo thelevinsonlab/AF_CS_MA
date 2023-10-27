@@ -1,0 +1,47 @@
+"0","#File import and processing"
+"0","allfiles <- list.files(""C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data"")"
+"0","CELfiles <- paste(""C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/"",sort(allfiles[grep("".CEL"",allfiles)]),sep="""")"
+"0","AF_expr <- read.celfiles(CELfiles)"
+"2","Platform design info loaded.
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102185_14R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102187_19R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102189_20R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102191_29R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102193_32R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102195_33R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102197_34R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102199_15R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102201_22R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102203_39R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102205_42R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102207_76R.CEL
+"
+"1","Reading in : C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/GSE79768/data/GSM2102209_92R.CEL
+"
+"0","AF_exprnorm <- rma(AF_expr)"
+"1","Background correcting
+"
+"1","Normalizing
+"
+"1","Calculating Expression
+"
+"0","AF_expr_mat <- exprs(AF_exprnorm)"
+"0",""
+"0","#Gene Names"
+"0","genesymbols <- getSYMBOL(as.character(rownames(AF_expr_mat)), ""hgu133plus2.db"")"
+"0","AF_expr_mat <- AF_expr_mat[!is.na(genesymbols),]"
+"0","rownames(AF_expr_mat) <- genesymbols[!is.na(genesymbols)]"
+"0",""
+"0","AF_expr_df <- as.data.frame(AF_expr_mat)"

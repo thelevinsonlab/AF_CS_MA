@@ -1,0 +1,4 @@
+"0","AF_Meta = readRDS(file = ""data/AF_Meta.rds"") #main object"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

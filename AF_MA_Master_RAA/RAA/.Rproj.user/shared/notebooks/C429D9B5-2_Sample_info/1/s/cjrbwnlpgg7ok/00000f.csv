@@ -1,0 +1,2 @@
+"0","sample_information <- read.delim(""~/PhD Heidelberg/Projects/AF_MA_Master_LAA/sample_information.txt"")"
+"0","head(sample_information)"

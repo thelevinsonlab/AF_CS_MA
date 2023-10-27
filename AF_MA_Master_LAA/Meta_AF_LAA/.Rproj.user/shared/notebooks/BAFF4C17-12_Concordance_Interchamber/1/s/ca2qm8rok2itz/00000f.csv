@@ -1,0 +1,40 @@
+"0","# Identify common genes"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","common_genes <- intersect(LAA_DE_genes$Genes, RAA_DE_genes$Genes)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","# Filter dataframes to keep only common genes"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","LAA_DE_common <- LAA_DE_genes[LAA_DE_genes$Genes %in% common_genes, ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_common <- RAA_DE_genes[RAA_DE_genes$Genes %in% common_genes, ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","# Sort both dataframes based on the 'Genes' column"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","LAA_DE_common <- LAA_DE_common[order(LAA_DE_common$DDE), ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_common <- RAA_DE_common[order(RAA_DE_common$DDE), ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","LAA_DE_common <- as.data.frame(LAA_DE_common)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_common <- as.data.frame(RAA_DE_common)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

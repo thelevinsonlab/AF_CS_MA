@@ -1,0 +1,4 @@
+"0","# PAYLOAD MECHANISM"
+"0","# filter by p-value and add a color column"
+"0","# (i.e. green down-regulated gened and red for up-regulated genes)"
+"0","head(subset(example1_mapped, log10(pvalue) >= -log10(0.01) | abs(logFC) >= 0.5))"

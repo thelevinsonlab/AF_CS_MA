@@ -1,0 +1,262 @@
+---
+title: "9_meta_analysis_ranking"
+output: html_document
+date: "2023-02-26"
+---
+
+# 1. Loading Packages and Functions
+```{r}
+library(biomaRt) # biomaRt for genomic data retrieval from Ensembl databases
+library(WriteXLS) # WriteXLS for writing data to an Excel file
+library(fgsea) # fgsea for running preranked gene set enrichment analysis
+library(openxlsx) # openxlsx for writing data to an Excel file using a more flexible approach than WriteXLS
+library(tidyverse) # tidyverse for data manipulation and visualization
+library(ggplot2)
+library(cowplot)
+library(circlize)
+library(grid)
+library(gridExtra)
+
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Main data object importing
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+# 3. Preprocessing Data
+```{r}
+# Preprocessing data to extract the names of the experiments and their sizes
+# 'experiments' will be a character vector containing the names of all the experiments
+# 'experiment_size' on its part will become a numeric vector containing the sample sizes of the experiments, sorted in decreasing order
+experiments = names(AF_Meta)
+names(experiments) = experiments
+experiment_size = sort(unlist(lapply(AF_Meta, 
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+```
+
+```{r}
+# Generating object for barplots
+
+meta_targets = get_tibble_union(AF_Meta,"TARGETS") %>% 
+  dplyr::select(sample,condition,ExpID) %>% 
+  mutate(grl_id = paste(sample,ExpID,sep = "_")) 
+
+saveRDS(meta_targets, 
+        file = "data/figure_objects/meta_targets.rds")
+```
+
+```{r}
+# 1. Meta-analysis
+
+fisher_rank = run_fisher_meta_AF(meta_list = AF_Meta,
+                              n_missing = length(AF_Meta) - 5)
+
+fisher_rank<- p.adjust(fisher_rank, method = "BH")
+
+print("Total number o")
+print(length(fisher_rank))
+sum(fisher_rank < .00005)
+
+genes = names(fisher_rank)
+```
+
+```{r}
+shiny_allgenes = get_tibble_union(meta_list = AF_Meta,
+                                  index_name = "AF_limma") %>% 
+                 filter(ID %in% genes)
+
+write.table(shiny_allgenes,col.names = T,
+            row.names = F,sep = "\t",quote = F,
+            file = "data/shiny/all_summary_stats.txt")
+
+saveRDS(fisher_rank, 
+        file = "data/shiny/fisher_rank.rds")
+```
+
+```{r}
+# p-values of each study
+p_matrix =(get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "P.Value"))[genes,]
+```
+
+```{r}
+# t-values of each study
+t_matrix =(get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "t"))[genes,]
+```
+
+```{r}
+# log fold change of each study
+lfc_matrix = (get_all_limma_AF(meta_list = AF_Meta,
+                            limma_column = "logFC"))[genes,]
+```
+
+```{r}
+# 2. Calculate the contribution of each study
+
+meta_ranking = -log10(fisher_rank)
+
+study_deg_list = lapply(AF_Meta, function(x){
+  deg = dplyr::slice(x$AF_limma, #top 500 genes of each study
+                     1:500)
+  return(deg[[1]])
+})
+
+set.seed(1234)
+contribution = fgsea(pathways = study_deg_list,
+                     stats = meta_ranking,nperm = 1000) %>% 
+  as_tibble()
+
+print(contribution,n=50)
+
+saveRDS(contribution, file = "data/figure_objects/contribution.rds")
+```
+
+```{r}
+# 3. No correlation between contribution and sample size 
+
+cor_contribt_size = cor.test(experiment_size[contribution$pathway],
+                             contribution$ES, method = "spearman")
+
+print("correlation: contribution-size")
+
+print(cor_contribt_size)
+```
+
+```{r}
+# 2. Annotate genes for summary
+listEnsembl()
+
+ensembl <- useEnsembl(biomart = "genes")
+listDatasets(ensembl)
+
+mart = useDataset(dataset = "hsapiens_gene_ensembl", mart = ensembl)
+
+g_annotation = getBM(filters= "hgnc_symbol", 
+                     attributes= c("description","hgnc_symbol"),
+                     values=genes,mart= mart)
+```
+
+```{r}
+testPerl(perl = "perl", verbose = TRUE)
+```
+
+```{r}
+# Creating a summary dataframe for Fisher's meta-analysis results
+# This includes the average t-values and log fold changes for each gene
+# The genes are then annotated with descriptions from the Ensembl database
+fisher_summary = tibble("gene" = genes,
+                        "fisher_pvalue" = fisher_rank,
+                        "mean_t" = rowMeans(t_matrix,na.rm = T),
+                        "mean_lfc" = rowMeans(lfc_matrix, na.rm = T)) %>% 
+  left_join(g_annotation, by = c("gene"="hgnc_symbol")) %>%
+  dplyr::select(gene, description, fisher_pvalue,mean_t,
+                mean_lfc)
+
+# Writing the summary table to a text file and saving the p-value, t-value, and log fold change matrices to an Excel file
+write.table(fisher_summary,col.names = T,
+            row.names = F,quote = F,
+            sep = "\t",
+            file = "./meta_analysis_summary.txt")
+
+p_matrix = as.data.frame(p_matrix) %>% rownames_to_column("gene")
+t_matrix = as.data.frame(t_matrix) %>% rownames_to_column("gene")
+lfc_matrix = as.data.frame(lfc_matrix) %>% rownames_to_column("gene")
+
+
+data_list <- list("fisher_summary" = fisher_summary,
+                  "p_matrix" = p_matrix,
+                  "t_matrix" = t_matrix,
+                  "lfc_matrix" = lfc_matrix)
+openxlsx::write.xlsx(data_list, "SupplementalTable2.xlsx")
+```
+
+#Plots
+
+```{r}
+experiments = experiments[names(experiment_size)]
+```
+
+```{r}
+# Choosing useful genes
+topgenes = names(fisher_rank)[1:500]
+
+# Creating a scatter plot of the -log10 transformed p-values from Fisher's meta-analysis
+
+pvalue_df = tibble(p_val = -log10(fisher_rank),
+                   rank = 1:length(p_val))
+
+rank_plot = ggplot(pvalue_df, aes(x = rank,
+                      y = p_val)) +
+  geom_point() + 
+  theme_minimal() +
+  theme(axis.text = element_text(size=10)) +
+  scale_x_continuous(expand = c(0.01, 0),breaks = c(length(topgenes),
+                                                    seq(1000,3000,2000), 
+                                               seq(3000,11000,2000),
+                                               length(fisher_rank)),
+                                    limits = c(0.3,14100)) +
+  geom_vline(xintercept = 500) +
+  ylab("-log10(BH p-value)") +
+  xlab("Meta-analysis Rank")
+
+
+pdf("data/figures/sup/SupplementalFigure11.pdf",
+    width = 8.70,
+    height = 4.24)
+
+grid.draw(rank_plot)
+grid.text("A", x = 0.025, y = 0.95, 
+          just = "center", gp = gpar(fontsize = 18, col = "black")) # adjust position, color, size as needed
+
+dev.off()
+```
+
+## 1) Define the set of genes that should be up or down regulated in AF
+```{r}
+# Identify top 10 genes with lowest p-value that are upregulated
+upregulated <- fisher_summary %>%
+  filter(mean_lfc > 0) %>%
+  arrange(fisher_pvalue) %>%
+  head(10)
+
+# Identify top 10 genes with lowest p-value that are downregulated
+downregulated <- fisher_summary %>%
+  filter(mean_lfc < 0) %>%
+  arrange(fisher_pvalue) %>%
+  head(10)
+
+# Combine upregulated and downregulated genes
+combined <- rbind(upregulated, downregulated)
+
+# Create a new column for -log10 p-value
+combined$neg_log10_pvalue <- -log10(combined$fisher_pvalue)
+
+# Identify the rank of each gene in the original dataframe
+combined$rank <- match(combined$gene, fisher_summary$gene)
+
+# Create the horizontal barplot
+top_genes <- ggplot(combined, aes(x=reorder(gene, mean_lfc), y=mean_lfc, fill=neg_log10_pvalue)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=paste0("Position ", rank)), position=position_stack(vjust=0.5), color="white", size=3) +
+  coord_flip() +
+  scale_fill_gradient(low = "#F6968E", high = "red") +
+  theme_classic() +
+  theme(axis.text.y = element_text(size = 12),  # Increase the size of y-axis labels
+        plot.title = element_text(size = 20)) +
+  labs(title = "", x = "", y = "LFC", fill = "-log10 BH P-value")
+
+pdf("data/figures/sup/SupplementalFigure12.pdf",
+    width = 12,
+    height = 10)
+
+grid.draw(top_genes)
+grid.text("A", x = 0.025, y = 0.97, 
+          just = "center", gp = gpar(fontsize = 18, col = "black")) # adjust position, color, size as needed
+
+dev.off()
+```
+

@@ -1,0 +1,16 @@
+"0","# Annotating the plots"
+"0","plot1 <- annotate_figure(plot_1, "
+"0","                         top = textGrob(""A. Age distribution per study and study group"", x = unit(0.05, ""npc""), y = unit(0.80, ""npc""), just=c(""left"", ""top""), gp=gpar(fontsize=14, fontface=""bold"")))"
+"2","Warnung: [38;5;232mRemoved 3 rows containing missing values (`geom_bar()`).[39m"
+"0","plot2 <- annotate_figure(plot_2, "
+"0","                         top = textGrob(""B. Sex distribution per study and study group"", x = unit(0.05, ""npc""), y = unit(0.80, ""npc""), just=c(""left"", ""top""), gp=gpar(fontsize=14, fontface=""bold"")))"
+"2","Warnung: [38;5;232mRemoved 12 rows containing missing values (`position_stack()`).[39m"
+"2","Warnung: [38;5;232mPosition guide is perpendicular to the intended axis
+[36mℹ[38;5;232m Did you mean to specify a different guide `position`?[39m"
+"2","Warnung: [38;5;232mPosition guide is perpendicular to the intended axis
+[36mℹ[38;5;232m Did you mean to specify a different guide `position`?[39m"
+"2","Warnung: [38;5;232mPosition guide is perpendicular to the intended axis
+[36mℹ[38;5;232m Did you mean to specify a different guide `position`?[39m"
+"0","plot3 <- annotate_figure(plot_3, "
+"0","                         top = textGrob(""C. LVEF distribution per study and study group"", x = unit(0.05, ""npc""), y = unit(0.80, ""npc""), just=c(""left"", ""top""), gp=gpar(fontsize=14, fontface=""bold"")))"
+"2","Warnung: [38;5;232mRemoved 12 rows containing missing values (`geom_bar()`).[39m"

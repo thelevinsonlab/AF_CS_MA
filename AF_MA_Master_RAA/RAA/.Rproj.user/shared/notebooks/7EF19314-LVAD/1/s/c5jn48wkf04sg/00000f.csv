@@ -1,0 +1,9 @@
+"0","library(cmprsk)"
+"2","Warnung: Paket ‘cmprsk’ wurde unter R Version 4.2.3 erstellt"
+"0","library(reshape2)"
+"0",""
+"0","cif_result <- cuminc(data$time_to_event, data$event_status, cencode = ""Censored"")"
+"2","Warnung: Unknown or uninitialised column: `time_to_event`."
+"2","Error in data.frame(time = ftime, cause = fstatus, group = as.factor(if (missing(group)) rep(1,  : 
+  Argumente implizieren unterschiedliche Anzahl Zeilen: 0, 29
+"

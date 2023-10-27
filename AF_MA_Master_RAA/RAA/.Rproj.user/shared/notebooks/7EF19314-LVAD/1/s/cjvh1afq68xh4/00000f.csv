@@ -1,0 +1,4 @@
+"0","data$muerte <- as.numeric(data$muerte)"
+"0",""
+"0","fit <- survfit(Surv(data$seguimiento_anos, data$muerte) ~ 1,"
+"0","               data = data)"

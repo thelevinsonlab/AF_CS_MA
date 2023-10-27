@@ -1,0 +1,8 @@
+"0","pdf(""data/figures/sup/SupplementalFigure3.pdf"","
+"0","    width = 8,"
+"0","    height = 10)"
+"0",""
+"0",""
+"0","print(plot_grid(pval,tval,lfc,"
+"0","          align = ""v"", ncol = 1,"
+"0","          rel_heights = c(1,1,1.3)))"

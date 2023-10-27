@@ -1,0 +1,6 @@
+"0","AF_Meta$Thomas_2019$TARGETS = AF_Meta$Thomas_2019$TARGETS %>% mutate(ExpID = ""Thomas_2019"")"
+"0","AF_Meta$Hsu_2018$TARGETS = AF_Meta$Hsu_2018$TARGETS %>% mutate(ExpID = ""Hsu_2018"")"
+"0","AF_Meta$Sun_2021$TARGETS = AF_Meta$Sun_2021$TARGETS %>% mutate(ExpID = ""Sun_2021"")"
+"0","AF_Meta$Herrera_Rivero_2022$TARGETS = AF_Meta$Herrera_Rivero_2022$TARGETS %>% mutate(ExpID = ""Herrera_Rivero_2022"")"
+"0","AF_Meta$Santos_2020$TARGETS = AF_Meta$Santos_2020$TARGETS %>% mutate(ExpID = ""Santos_2020"")"
+"0","AF_Meta$Zhu_2020$TARGETS = AF_Meta$Zhu_2020$TARGETS %>% mutate(ExpID = ""Zhu_2020"")"

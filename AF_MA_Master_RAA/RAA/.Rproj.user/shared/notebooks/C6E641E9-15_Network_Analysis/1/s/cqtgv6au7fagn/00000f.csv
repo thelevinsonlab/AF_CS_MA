@@ -1,0 +1,3 @@
+"0","# post payload information to the STRING server"
+"0","payload_id <- string_db$post_payload( example1_mapped_sig$STRING_id,"
+"0","                                      colors=example1_mapped_sig$color )"

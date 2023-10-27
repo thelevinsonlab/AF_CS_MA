@@ -1,0 +1,5 @@
+"0","# Create data frames for ""Death"" and ""Transplant"""
+"0","death_data <- data.frame(time = time_death, event = ""Death"", cumulative_incidence = cif_death)"
+"2","Error in data.frame(time = time_death, event = ""Death"", cumulative_incidence = cif_death) : 
+  object 'time_death' not found
+"

@@ -1,0 +1,4 @@
+"0","AF_Meta[ids[[1]]] = lapply(AF_Meta[ids[[1]]], function(x){"
+"0","  x[[""AF_limma""]] = run_AFlimma(x$GEX, x$TARGETS)"
+"0","  return(x)"
+"0","})"

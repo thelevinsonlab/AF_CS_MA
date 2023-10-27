@@ -1,0 +1,2 @@
+"0","LAA_DE_genes <- read_excel(""~/PhD Heidelberg/Projects/AF_MA_Master_LAA/SupplementalTable2.xlsx"")"
+"0","RAA_DE_genes <- read_excel(""~/PhD Heidelberg/Projects/AF_MA_Master_RAA/SupplementalTable2.xlsx"")"

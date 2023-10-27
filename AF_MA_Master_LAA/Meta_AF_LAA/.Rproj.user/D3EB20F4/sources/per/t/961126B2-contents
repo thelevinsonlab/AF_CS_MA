@@ -1,0 +1,301 @@
+#########################################
+# Part 4: Random Forest Classification
+#########################################
+
+library(dplyr)
+library(tidyr)
+library(randomForest)
+library(umap)
+library(maptools)
+library(decoupleR)
+library(pheatmap)
+library(biomaRt)
+library(xgboost)
+
+
+dds_norm_count_df <- dds_norm_count %>% as.data.frame() %>% rownames_to_column("Gene")
+
+# Define the BioMart object
+mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+
+# Query BioMart for the gene symbols corresponding to your Ensembl IDs
+# Here, 'Zhu_counts$Gene' refers to the column of your data frame that contains the Ensembl IDs
+# You may need to replace 'Zhu_counts$Gene' with the actual column name in your data frame
+IDs <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"),
+             filters = "ensembl_gene_id",
+             values = dds_norm_count_df$Gene,
+             mart = mart)
+
+dds_norm_count_df$GeneSymbol <- IDs$hgnc_symbol[match(dds_norm_count_df$Gene, IDs$ensembl_gene_id)]
+
+# Remove rows with NA or empty in 'GeneSymbol'
+dds_norm_count_df <- dds_norm_count_df[!is.na(dds_norm_count_df$GeneSymbol), ]
+dds_norm_count_df <- dds_norm_count_df[dds_norm_count_df$GeneSymbol != "", ]
+
+# Create a table of duplicated gene symbols
+dupes <- table(dds_norm_count_df$GeneSymbol)
+dupes <- dupes[dupes > 1]
+
+# Now set the rownames and remove the columns as before
+rownames(dds_norm_count_df) <- dds_norm_count_df$GeneSymbol
+dds_norm_count_df <- subset(dds_norm_count_df, select = -c(Gene, GeneSymbol))
+
+dds_norm_count_performance <- dds_norm_count_df %>% as.data.frame() %>% dplyr::select(-c(15:22))
+
+res <- res %>% rownames_to_column("Gene")
+
+IDs <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol"),
+             filters = "ensembl_gene_id",
+             values = res$Gene,
+             mart = mart)
+
+res$GeneSymbol <- IDs$hgnc_symbol[match(res$Gene, IDs$ensembl_gene_id)]
+res <- res[!is.na(res$GeneSymbol), ]
+res <- res[res$GeneSymbol != "", ]
+
+
+# Transposing the dataframe so that each row represents a sample and columns represent genes.
+dds_long <- dds_norm_count_performance %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Sample")
+
+# Adding a label column
+dds_long$Label <- ifelse(grepl("^sevCCC", dds_long$Sample), "CCC", "CTRL")
+
+dds_long$Label <- as.factor(dds_long$Label)
+
+names(dds_long) <- make.names(names(dds_long), unique = TRUE)
+
+
+
+  
+
+#Libraries
+library(GEOquery)
+
+library(dplyr)
+library(hgu133plus2.db)
+library(tidyverse)
+library(edgeR)
+library(annotate)
+library(oligo)
+
+gset <- getGEO("GSE84796", GSEMatrix = TRUE, getGPL=FALSE)
+
+if (length(gset) > 1) idx <- grep("GPL14550", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+
+ex <- exprs(gset)
+
+ex_df <- as.data.frame(ex)
+
+#Targets creation
+targets_test <- as.data.frame(matrix(NA,length(names(ex_df)),2))
+names(targets_test) <- c("sample","condition")
+targets_test$sample <- names(ex_df)
+targets_test[1:10, 2] <- "CCC"
+targets_test[11:17, 2] <- "CTRL"
+targets_test$condition <- as.factor(targets_test$condition)
+rownames(targets_test) <- targets_test$sample
+targets_test$sample <- NULL
+
+# 2. QC - outlier detection ------------------------------------------------
+# detect outlier genes
+
+gsg <- goodSamplesGenes(t(ex_df))
+summary(gsg)
+gsg$allOK
+
+table(gsg$goodGenes)
+table(gsg$goodSamples)
+
+# remove genes that are detectd as outliers
+ex_df <- ex_df[gsg$goodGenes == TRUE,]
+
+# detect outlier samples - hierarchical clustering - method 1
+htree <- hclust(dist(t(ex_df)), method = "average")
+plot(htree)
+
+
+# pca - method 2
+
+pca <- prcomp(t(ex_df))
+pca.dat <- pca$x
+
+pca.var <- pca$sdev^2
+pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
+
+pca.dat <- as.data.frame(pca.dat)
+
+ggplot(pca.dat, aes(PC1, PC2)) +
+  geom_point() +
+  geom_text(label = rownames(pca.dat)) +
+  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
+       y = paste0('PC2: ', pca.var.percent[2], ' %'))
+
+ex_df <- rownames_to_column(ex_df, var = "probes")
+
+probes <- ex_df$probes
+
+ensembl <- useMart('ensembl', dataset = 'hsapiens_gene_ensembl')
+
+tables <- listAttributes(ensembl)
+tables[grep('agilent', tables[,1]),]
+
+annot <- getBM(
+  attributes = c('agilent_sureprint_g3_ge_8x60k',
+                 'wikigene_description',
+                 'ensembl_gene_id',
+                 'entrezgene_id',
+                 'gene_biotype',
+                 'external_gene_name'),
+  filters = 'agilent_sureprint_g3_ge_8x60k',
+  values = probes,
+  mart = ensembl)
+
+annot_merged <- merge(
+  x = as.data.frame(probes),
+  y =  annot,
+  by.y = 'agilent_sureprint_g3_ge_8x60k',
+  all.x = T,
+  by.x = 'probes')
+
+colnames(annot_merged)
+
+annot_merged_filtered <- subset(annot_merged, !is.na(annot_merged$entrezgene_id))
+
+sum(is.na(annot_merged_filtered$external_gene_name))
+sum(annot_merged$external_gene_name == "")
+
+#Merge with expression matrix
+expression_merged <- inner_join(annot_merged_filtered, ex_df, by = "probes")
+
+#Clean the counts matrix
+columns_to_remove <- c("probes", "wikigene_description", "ensembl_gene_id", "entrezgene_id", "gene_biotype")
+expression_merged <- expression_merged %>% dplyr::select(-columns_to_remove) 
+
+# Remove rows with NA or empty Gene Names
+expression_merged <- expression_merged[!is.na(expression_merged$external_gene_name), ]
+expression_merged <- expression_merged[expression_merged$external_gene_name != "", ]
+
+# Create a table of duplicated gene symbols
+dupes <- table(expression_merged$external_gene_name)
+dupes <- dupes[dupes > 1]
+
+# Remove all but the first appearance of each duplicated row based on 'external_gene_name'
+expression_merged <- expression_merged[!duplicated(expression_merged$external_gene_name), ]
+
+
+# Now set the rownames and remove the columns as before
+rownames(expression_merged) <- expression_merged$external_gene_name
+expression_merged <- subset(expression_merged, select = -c(external_gene_name))
+
+
+save(expression_merged, file = "./GSE84796_counts.ro")
+
+write.table(expression_merged, file = "expression_merged.txt", sep = "\t",
+            row.names = TRUE, col.names = NA)
+
+save(targets_test, file = "./mRNA_targets.ro")
+
+# perform variance stabilization
+design <- model.matrix(~0 + targets_test$condition)
+colnames(design) <- levels(targets_test$condition)
+
+fit <- lmFit(expression_merged, design)
+contrast.matrix <- makeContrasts(CCC-CTRL, levels=design)
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit2 <- eBayes(fit2)
+
+res_test <- topTable(fit2, adjust="fdr", number=Inf)
+
+
+
+# Transposing the dataframe so that each row represents a sample and columns represent genes.
+ex_long <- expression_merged %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "Sample")
+
+# Adding a label column
+ex_long$Label <- ifelse(1:nrow(ex_long) <= 10, "CCC", 
+                        ifelse(11 <= 1:nrow(ex_long) & 1:nrow(ex_long) <= 17, "CTRL", NA))
+
+
+ex_long$Label <- as.factor(ex_long$Label)
+
+
+# Find the common columns
+common_cols <- intersect(names(dds_long), names(ex_long))
+
+# Include the dependent variable if it's not already in common columns
+if(!"Label" %in% common_cols) common_cols <- c(common_cols, "Label")
+
+# Subset dds_long to include only common columns
+dds_long_trimmed <- dds_long[, common_cols]
+
+dds_long_trimmed_log <- dds_long_trimmed %>% column_to_rownames("Sample") %>% dplyr::select(-Label)
+
+constant <- 1e-5
+dds_long_trimmed_log <- log2(dds_long_trimmed_log + constant)
+
+# Adding a label column
+dds_long_trimmed_log$Label <- ifelse(1:nrow(dds_long_trimmed_log) <= 8, "CCC", 
+                        ifelse(8 <= 1:nrow(dds_long_trimmed_log) & 1:nrow(dds_long_trimmed_log) <= 14, "CTRL", NA))
+
+
+dds_long_trimmed_log$Label <- as.factor(dds_long_trimmed_log$Label)
+
+
+# Assign the features to a variable
+features <- dds_long_trimmed_log[, -ncol(dds_long_trimmed_log)]
+
+# Assign the labels to a variable
+labels <- dds_long_trimmed_log$Label
+
+library(randomForest)
+
+# Random Forest for feature selection
+set.seed(42)
+rf_model <- randomForest(x = features, y = labels, importance = TRUE)
+important_features <- importance(rf_model)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Extracting Common Columns
+common_cols <- setdiff(intersect(names(dds_long_trimmed_log), names(ex_long)), c("Sample", "Label"))
+
+# Preparing the Training Data
+train_data <- as.matrix(dds_long_trimmed_log[, common_cols])
+train_label <- ifelse(dds_long_trimmed_log$Label == "CCC", 1, 0)  # Assuming "CCC" is the positive class
+
+# Preparing the Validation Data
+test_data <- as.matrix(ex_long[, common_cols])
+test_label <- ifelse(ex_long$Label == "CCC", 1, 0)  # Assuming "CCC" is the positive class
+
+# put our testing & training data into two seperates Dmatrixs objects
+dtrain <- xgb.DMatrix(data = train_data, label= train_label)
+dtest <- xgb.DMatrix(data = test_data, label= test_label)
+
+# train a model using our training data
+model <- xgboost(data = dtrain, # the data   
+                 nround = 2, # max number of boosting iterations
+                 objective = "binary:logistic")  # the objective function
+
+# generate predictions for our held-out testing data
+pred <- predict(model, dtest)
+
+# get & print the classification error
+err <- mean(as.numeric(pred > 0.5) != test_label)
+print(paste("test-error=", err))

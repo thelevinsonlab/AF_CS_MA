@@ -1,0 +1,3 @@
+"0","# Save plots to a single file"
+"0","pdf(""data/figures/sup/SupplementalFigure1.pdf"", width = 22, height = 20)"
+"0","grid.arrange(plot1, plot2, plot3, nrow = 3)"

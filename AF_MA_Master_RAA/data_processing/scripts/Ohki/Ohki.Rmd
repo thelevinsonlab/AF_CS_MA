@@ -1,0 +1,81 @@
+---
+title: "Ohki_2005"
+output: html_document
+date: "2023-06-06"
+---
+
+```{r}
+#Libraries
+library(GEOquery)
+library(umap)
+library(dplyr)
+library(hgu95a.db)
+library(tidyverse)
+library(limma)
+library(annotate)
+library(hugene11sttranscriptcluster.db)
+library(oligo)
+```
+
+
+```{r}
+#File import and processing
+Ohki <- read.delim2("~/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/Ohki/Ohki.txt")
+colnames(Ohki)
+
+rownames(Ohki) <- Ohki[,1]
+Ohki[,1] <- NULL
+
+#Gene Names
+genesymbols <- getSYMBOL(as.character(rownames(Ohki)), "hgu95a.db")
+AF_expr_mat <- Ohki[!is.na(genesymbols),]
+AF_expr_mat$symbol <- genesymbols[!is.na(genesymbols)]
+
+# Calculate the number of non-zero values in each row
+non_zero_counts <- apply(AF_expr_mat, 1, function(x) sum(x != 0))
+
+# Add the counts to your data frame as a new column
+AF_expr_mat$non_zero_counts <- non_zero_counts
+
+# Order your data frame by the non_zero_counts column in descending order
+AF_expr_mat <- AF_expr_mat[order(-AF_expr_mat$non_zero_counts), ]
+
+# Remove the non_zero_counts column
+AF_expr_mat$non_zero_counts <- NULL
+
+# Remove duplicate rows based on row names
+AF_expr_mat <- AF_expr_mat[!duplicated(AF_expr_mat$symbol), ]
+
+rownames(AF_expr_mat) <- AF_expr_mat$symbol
+AF_expr_mat[,18] <- NULL
+```
+
+
+```{r}
+#Targets creation
+
+Ohki_targets <- read.delim("~/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/Ohki/metadata.txt")
+
+save(Ohki_targets, file = "./Ohki_targets.ro")
+```
+
+```{r}
+#### Complete preproc ####
+## mean by same probeset
+GENENAMES = rownames(AF_expr_mat)
+AF_dataframe = data.frame(AF_expr_mat,stringsAsFactors = F) %>% mutate(ID = GENENAMES)
+AF_dataframe = aggregate(x = AF_dataframe[, 1:ncol(AF_expr_mat)], 
+                         by = list(ID = AF_dataframe$ID), 
+                         FUN = "mean", na.rm = T)
+
+AF_expr_mat = as.matrix(AF_dataframe[,2:ncol(AF_dataframe)])
+rownames(AF_expr_mat) = AF_dataframe$ID
+
+
+colnames(AF_expr_mat) = unlist(lapply(strsplit(colnames(AF_expr_mat),"_"), 
+                                      function(x) x[1]))
+
+Ohki_counts = AF_expr_mat
+        
+save(Ohki_counts, file = "./Ohki_counts.ro")
+```

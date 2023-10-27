@@ -1,0 +1,27 @@
+"0","LAA_DE_genes$DDE <- -log10(LAA_DE_genes$fisher_pvalue) * sign(LAA_DE_genes$mean_lfc)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_genes$DDE <- -log10(RAA_DE_genes$fisher_pvalue) * sign(RAA_DE_genes$mean_lfc)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","LAA_DE_genes <- LAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","LAA_DE_genes <- LAA_DE_genes[!duplicated(LAA_DE_genes$Genes), ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_genes <- RAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","RAA_DE_genes <- RAA_DE_genes[!duplicated(RAA_DE_genes$Genes), ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

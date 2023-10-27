@@ -1,0 +1,70 @@
+"0","library(arsenal)"
+"2","
+Attache Paket: ‘arsenal’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:lubridate’:
+
+    is.Date
+
+"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(readxl)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(survival)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(ggplot2)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(ggfortify)"
+"2","Warnung: Paket ‘ggfortify’ wurde unter R Version 4.2.3 erstellt"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(survminer)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(nricens)"
+"2","Warnung: Paket ‘nricens’ wurde unter R Version 4.2.3 erstellt"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(dplyr)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(scales)"
+"2","
+Attache Paket: ‘scales’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:arsenal’:
+
+    ordinal
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:purrr’:
+
+    discard
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:readr’:
+
+    col_factor
+
+"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"0","library(writexl)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"

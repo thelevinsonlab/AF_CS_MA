@@ -1,0 +1,7 @@
+"0","top_cells_per_pathway <- cell_gene_combinations %>%"
+"0","  group_by(ID, cell_names) %>%"
+"0","  count() %>%"
+"0","  group_by(ID) %>%"
+"0","  slice_max(n, n = 3)"
+"0",""
+"0","print(top_cells_per_pathway)"

@@ -1,0 +1,22 @@
+[2023-08-28 04:09:15] [INFO]    [OmnipathR] Welcome to OmnipathR!
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] Reading JSON from `C:\Users\sergi\AppData\Local\cache\OmnipathR/cache.json` (encoding: UTF-8).
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:09:15] [INFO]    [OmnipathR] Initialized cache: `C:\Users\sergi\AppData\Local\cache\OmnipathR`.
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/db/db_def.json` (encoding: UTF-8).
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/magic_bytes.json` (encoding: UTF-8).
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/urls.json` (encoding: UTF-8).
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] Reading JSON from `C:/Users/sergi/AppData/Local/R/win-library/4.2/OmnipathR/internal/id_types.json` (encoding: UTF-8).
+[2023-08-28 04:09:15] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:12:08] [TRACE]   [OmnipathR] Loaded data from RDS `C:\Users\sergi\AppData\Local\cache\OmnipathR/485498a0b8637e8a936f7efbf1fcc7b742d7867a-1.rds`.
+[2023-08-28 04:12:08] [INFO]    [OmnipathR] Loaded from cache: `https://omnipathdb.org/interactions?genesymbols=yes&datasets=collectri&organisms=9606&dorothea_levels=A,B&fields=sources,references,curation_effort&license=academic`
+[2023-08-28 04:12:09] [SUCCESS] [OmnipathR] Loaded 64495 interactions from cache.
+[2023-08-28 04:19:17] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-08-28 04:19:17] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:19:18] [TRACE]   [OmnipathR] Reading JSON from `https://omnipathdb.org/resources` (encoding: UTF-8).
+[2023-08-28 04:19:18] [TRACE]   [OmnipathR] JSON validation successful: TRUE
+[2023-08-28 04:19:18] [TRACE]   [OmnipathR] Loaded data from RDS `C:\Users\sergi\AppData\Local\cache\OmnipathR/3492392585ba05414edfae46801492076437d7e7-1.rds`.
+[2023-08-28 04:19:18] [INFO]    [OmnipathR] Loaded from cache: `https://omnipathdb.org/annotations?resources=PROGENy&license=academic`
+[2023-08-28 04:19:18] [SUCCESS] [OmnipathR] Loaded 700239 annotation records from cache.

@@ -1,0 +1,36 @@
+"0","jaccard_res_all =  enframe(lapply(experiments, function(set_a){"
+"0","  genes_a = study_genelist_all[[set_a]]"
+"0","  j_ix_a = lapply(experiments, function(set_b){"
+"0","    "
+"0","    genes_b = study_genelist_all[[set_b]]"
+"0","    "
+"0","    #Jaccard Index"
+"0","    j_ix = length(intersect(genes_a,genes_b))/length(union(genes_a,genes_b))"
+"0","    "
+"0","    return(j_ix)"
+"0","  })"
+"0","  "
+"0","  j_ix_a = enframe(j_ix_a, ""StudyB"",""JaccardIx"") %>% "
+"0","    unnest()"
+"0","  "
+"0","  return(j_ix_a)"
+"0","  "
+"0","}), ""StudyA"") %>% unnest() %>%"
+"0","  mutate(StudyA = factor(StudyA,"
+"0","                         levels = names(experiment_size)),"
+"0","         StudyB = factor(StudyB,"
+"0","                         levels = names(experiment_size)))"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(JaccardIx)`.[39m"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(value)`.[39m"

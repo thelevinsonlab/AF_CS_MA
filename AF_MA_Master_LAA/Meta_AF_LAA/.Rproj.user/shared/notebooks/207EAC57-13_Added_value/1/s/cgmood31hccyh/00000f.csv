@@ -1,0 +1,57 @@
+"0","library(PLIER)"
+"2","Lade nötiges Paket: RColorBrewer
+"
+"2","Lade nötiges Paket: gplots
+"
+"2","
+Attache Paket: ‘gplots’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:stats’:
+
+    lowess
+
+"
+"2","Lade nötiges Paket: pheatmap
+"
+"2","Lade nötiges Paket: glmnet
+"
+"2","Warnung: Paket ‘glmnet’ wurde unter R Version 4.2.3 erstellt"
+"2","Lade nötiges Paket: Matrix
+"
+"2","Warnung: Paket ‘Matrix’ wurde unter R Version 4.2.3 erstellt"
+"2","
+Attache Paket: ‘Matrix’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:tidyr’:
+
+    expand, pack, unpack
+
+"
+"2","Loaded glmnet 4.1-7
+"
+"2","Lade nötiges Paket: knitr
+"
+"2","Warnung: Paket ‘knitr’ wurde unter R Version 4.2.3 erstellt"
+"2","Lade nötiges Paket: rsvd
+"
+"2","Lade nötiges Paket: qvalue
+"
+"0","library(reshape2)"
+"2","
+Attache Paket: ‘reshape2’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:tidyr’:
+
+    smiths
+
+"
+"0","library(ROCR)"
+"0","library(fgsea)"
+"0","library(dplyr)"
+"0","library(tidyr)"
+"0","library(WriteXLS)"
+"0",""
+"0","source(""src/utils_AF_Meta.R"")"

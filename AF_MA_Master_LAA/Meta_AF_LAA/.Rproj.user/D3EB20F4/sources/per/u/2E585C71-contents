@@ -1,0 +1,72 @@
+library(readxl)
+library(dplyr)
+
+
+
+LAA_DE_genes <- read_excel("~/PhD Heidelberg/Projects/AF_MA_Master_LAA/SupplementalTable2.xlsx")
+RAA_DE_genes <- read_excel("~/PhD Heidelberg/Projects/AF_MA_Master_RAA/SupplementalTable2.xlsx")
+
+
+LAA_DE_genes$DDE <- -log10(LAA_DE_genes$fisher_pvalue) * sign(LAA_DE_genes$mean_lfc)
+RAA_DE_genes$DDE <- -log10(RAA_DE_genes$fisher_pvalue) * sign(RAA_DE_genes$mean_lfc)
+
+
+LAA_DE_genes <- LAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)
+LAA_DE_genes <- LAA_DE_genes[!duplicated(LAA_DE_genes$Genes), ]
+
+RAA_DE_genes <- RAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)
+RAA_DE_genes <- RAA_DE_genes[!duplicated(RAA_DE_genes$Genes), ]
+
+# Identify common genes
+common_genes <- intersect(LAA_DE_genes$Genes, RAA_DE_genes$Genes)
+
+# Filter dataframes to keep only common genes
+LAA_DE_common <- LAA_DE_genes[LAA_DE_genes$Genes %in% common_genes, ]
+RAA_DE_common <- RAA_DE_genes[RAA_DE_genes$Genes %in% common_genes, ]
+
+# Sort both dataframes based on the 'Genes' column
+LAA_DE_common <- LAA_DE_common[order(LAA_DE_common$DDE), ]
+RAA_DE_common <- RAA_DE_common[order(RAA_DE_common$DDE), ]
+
+LAA_DE_common <- as.data.frame(LAA_DE_common)
+RAA_DE_common <- as.data.frame(RAA_DE_common)
+
+
+# Now try the RRHO2_initialize() function again
+RRHO_obj <- RRHO2_initialize(LAA_DE_common, RAA_DE_common, labels = c("LAA Gene Rank", "RAA Gene Rank"), log10.ind=TRUE)
+
+
+pdf("RRHO_heatmap.pdf", width = 14, height = 10)
+RRHO2_heatmap(RRHO_obj)
+dev.off()
+
+
+
+
+## gene lists (down regulation in list1 and down regulation in list 2) that provide the most significant overlap
+RRHO_obj$genelist_dd
+
+## down regulation genes in list1
+RRHO_obj$genelist_dd$gene_list1_dd
+
+## down regulation genes in list2
+RRHO_obj$genelist_dd$gene_list2_dd
+
+## overlap between down regulation genes in list1 and list2
+RRHO_obj$genelist_dd$gene_list_overlap_dd
+
+#### Visualize by Venn Diagram
+RRHO2_vennDiagram(RRHO_obj, type="dd")
+
+RRHO2_vennDiagram(RRHO_obj, type="uu")
+
+RRHO2_vennDiagram(RRHO_obj, type="du")
+
+RRHO2_vennDiagram(RRHO_obj, type="ud")
+
+
+
+
+
+
+

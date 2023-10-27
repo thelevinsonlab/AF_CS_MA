@@ -1,0 +1,7 @@
+"0","RAA_DE_genes <- read_excel(""~/PhD Heidelberg/Projects/AF_MA_Master_RAA/SupplementalTable2.xlsx"")"
+"0",""
+"0","RAA_DE_genes <- RAA_DE_genes %>% select(c(fisher_pvalue, mean_lfc, gene)) %>% filter(fisher_pvalue <0.05) %>% rename(pvalue = fisher_pvalue) %>% "
+"0","  rename(logFC = mean_lfc) %>% as.data.frame()"
+"2","Error in (function (classes, fdef, mtable)  : 
+  kann keine vererbte Methode finden für Funktion ‘select’ für Signatur ‘""tbl_df""’
+"

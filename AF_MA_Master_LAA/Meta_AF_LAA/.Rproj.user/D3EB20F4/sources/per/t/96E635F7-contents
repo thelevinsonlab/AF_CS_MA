@@ -1,0 +1,58 @@
+# Once installed, you can load it into your environment.
+library(ggplot2)
+
+# Assuming your data is in a data frame called df, and the columns are "Year" and "Number"
+# df <- data.frame(Year = ..., Number = ...)
+
+# Now let's create the bar plot.
+p <- ggplot(years, aes(x = Year, y = Number)) + 
+  geom_bar(stat = "identity", fill = "steelblue", color = "black") + 
+  geom_text(aes(label=Number), vjust=-0.3, size=3.5) +
+  theme_minimal() + 
+  labs(x = "Year", y = "Number of Studies", title = "Number of Studies Published Per Year") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  scale_x_continuous(breaks = seq(min(years$Year), max(years$Year), by = 1))
+  
+ggsave("bar_plot_af.png", plot = p, width = 12, height = 8, dpi = 300)
+
+
+load("~/PhD Heidelberg/Projects/Documents_and_datasets/Presentation/scripts/Herrera_Rivero/Herrera_Rivero_targets.ro")
+
+df <- read.delim2("~/PhD Heidelberg/Projects/Documents_and_datasets/Presentation/graph_genes.txt")
+# Convert fisher_pvalue to numeric (it seems to be in European decimal format)
+df$fisher_pvalue <- as.numeric(sub(",", ".", df$fisher_pvalue))
+
+# Order the dataframe based on fisher_pvalue
+df <- df[order(df$fisher_pvalue), ]
+
+# Load necessary libraries
+library(ggplot2)
+library(scales)
+library("viridis")  
+
+color_palette <- c("#1A5276", "#E74C3C", "#1E8449", "#E69F00", "#D55E00", "#CC79A7", "#0072B2", 
+                   "#6A3D9A", "#FF7F00", "#B15928", "#A6CEE3", "#33A02C", "#FB9A99", "#E31A1C", 
+                   "#FDBF6F", "#CAB2D6")
+
+
+# Create a horizontal bar plot
+p <- ggplot(df, aes(x = reorder(gene, -fisher_pvalue), y = fisher_pvalue)) +
+  geom_bar(stat = "identity", aes(fill = gene)) +
+  geom_point(aes(y = fisher_pvalue), size = 6, shape = 21, fill = "white", color = "black") +
+  geom_text(aes(y = fisher_pvalue, label = position), size = 1.5) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+  scale_fill_manual(values = color_palette) +
+  coord_flip() +
+  labs(x = "Gene", 
+       y = "Fisher P-value", 
+       title = "Bar Plot of Fisher P-value for each Gene") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))  # This centers the title
+
+print(p)
+
+# Save the plot
+ggsave("genes_interest.png", plot = p, width = 12, height = 8, dpi = 600)
+
+

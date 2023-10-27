@@ -1,0 +1,62 @@
+"0","library(arsenal)"
+"0","library(readxl)"
+"0","library(survival)"
+"0","library(ggplot2)"
+"2","Warnung: Paket ‘ggplot2’ wurde unter R Version 4.2.3 erstellt"
+"0","library(ggfortify)"
+"2","Warnung: Paket ‘ggfortify’ wurde unter R Version 4.2.3 erstellt"
+"0","library(survminer)"
+"2","Lade nötiges Paket: ggpubr
+"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"2","
+Attache Paket: ‘survminer’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:survival’:
+
+    myeloma
+
+"
+"0","library(nricens)"
+"2","Warnung: Paket ‘nricens’ wurde unter R Version 4.2.3 erstellt"
+"0","library(dplyr)"
+"2","Warnung: Paket ‘dplyr’ wurde unter R Version 4.2.3 erstellt"
+"2","
+Attache Paket: ‘dplyr’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:stats’:
+
+    filter, lag
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"0","library(scales)"
+"2","
+Attache Paket: ‘scales’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:arsenal’:
+
+    ordinal
+
+"
+"0","library(writexl)"
+"0","library(gridExtra)"
+"2","
+Attache Paket: ‘gridExtra’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    combine
+
+"

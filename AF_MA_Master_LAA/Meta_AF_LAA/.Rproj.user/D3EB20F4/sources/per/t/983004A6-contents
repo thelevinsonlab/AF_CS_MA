@@ -1,0 +1,355 @@
+---
+title: "16_Network_Analysis"
+output: html_document
+date: "2023-08-07"
+---
+
+```{r}
+library(STRINGdb)
+library(RCy3)
+library(dplyr)
+library(igraph)
+library(biomaRt)
+library(reshape2)
+library(readxl)
+library(grid)
+library(gridExtra)
+
+source("src/utils_AF_Meta.R")
+```
+
+```{r}
+LAA_DE_genes <- read_excel("./SupplementalTable2.xlsx")
+
+LAA_DE_genes <- LAA_DE_genes %>% dplyr::select(c(fisher_pvalue, mean_lfc, gene)) %>% filter(fisher_pvalue <0.05) %>% rename(pvalue = fisher_pvalue) %>% 
+  rename(logFC = mean_lfc) %>% as.data.frame()
+```
+
+```{r}
+string_db <- STRINGdb$new(version = "11.5", species = 9606, score_threshold = 400, input_directory="")
+class(string_db)
+```
+
+```{r}
+example1_mapped <- string_db$map(LAA_DE_genes, "gene", removeUnmappedRows = TRUE )
+```
+
+```{r}
+dim(example1_mapped)
+```
+
+```{r}
+#View(example1_mapped)
+hits <- example1_mapped$STRING_id
+```
+
+```{r}
+pdf("data/figures/sup/SupplementalFigure15.pdf", width = 14, height = 10)
+
+
+grid.draw(string_db$plot_network(hits))
+grid.text("A", x = 0.025, y = 0.97, 
+          just = "center", gp = gpar(fontsize = 18, col = "black")) # adjust position, color, size as needed
+dev.off()
+```
+
+```{r}
+# PAYLOAD MECHANISM
+# filter by p-value and add a color column
+# (i.e. green down-regulated gened and red for up-regulated genes)
+head(subset(example1_mapped, log10(pvalue) >= -log10(0.01) | abs(logFC) >= 0.5))
+```
+
+```{r}
+example1_mapped_sig <- string_db$add_diff_exp_color(subset(example1_mapped, log10(pvalue) >= -log10(0.01) | abs(logFC) >= 0.5),
+                                                        logFcColStr="logFC" )
+head(example1_mapped_sig)
+```
+
+```{r}
+# post payload information to the STRING server
+payload_id <- string_db$post_payload( example1_mapped_sig$STRING_id,
+                                      colors=example1_mapped_sig$color )
+```
+
+```{r}
+# display a STRING network png with the "halo"
+string_db$plot_network(hits, payload_id=payload_id)
+```
+
+```{r}
+clustersList <- string_db$get_clusters(example1_mapped$STRING_id)
+# plot first 4 clusters
+par(mfrow=c(2,2))
+for(i in seq(1:4)){
+   string_db$plot_network(clustersList[[i]])
+   }
+```
+
+# Connecting to Cytoscape
+```{r}
+cytoscapePing () # make sure cytoscape is open
+cytoscapeVersionInfo ()
+```
+
+```{r}
+interaction_data <- string_db$get_interactions(example1_mapped$STRING_id)
+
+edge <- interaction_data[, c("from", "to", "combined_score")]
+colnames(edge) <- c("source", "target", "weight")
+
+# Creating the node object
+node <- unique(data.frame(id = unlist(edge[, c("source", "target")])))
+
+node <- merge(node, example1_mapped[, c("STRING_id", "gene")], by.x = "id", by.y = "STRING_id", all.x = TRUE)
+colnames(node) <- c("id", "altName")
+
+
+createNetworkFromDataFrames(node,edge, title="LAA_network", collection="AF-CS")
+```
+
+
+# We run Cytohubba on the UI and create the networks
+```{r}
+#Get the information from the currently used networks
+networks_list <- getNetworkList()
+
+network_names <- c("LAA_network_DMNC_top10", "LAA_network_MCC_top30", "LAA_network_MCC_top40", "LAA_network_DMNC_top20", "LAA_network_MCC_top10", "LAA_network_MNC_top50", "LAA_network_MNC_top40", "LAA_network_MNC_top30", "LAA_network_MCC_top20", "LAA_network_MNC_top20", "LAA_network_MNC_top10", "LAA_network_DMNC_top30", "LAA_network_DMNC_top40", "LAA_network_DMNC_top50", "LAA_network_MCC_top50")
+
+import_networks <- function(network_names) {
+  # List to store information for each network
+  all_networks_info <- list()
+
+  for (network_name in network_names) {
+    # Get the SUID for the network by name
+    network_suid <- getNetworkSuid(title = network_name)
+
+    # Set the current network by SUID
+    setCurrentNetwork(network_suid[1])
+
+    # Get information about the nodes
+    nodes_df <- getTableColumns('node')
+
+    # Get information about the edges
+    edges_df <- getTableColumns('edge')
+
+    # Create file names
+    nodes_file_name <- paste0("nodes_df_", gsub("LAA_network_", "", network_name), ".csv")
+    edges_file_name <- paste0("edges_df_", gsub("LAA_network_", "", network_name), ".csv")
+
+    # Save to CSV files
+    write.csv(nodes_df, nodes_file_name, row.names = FALSE)
+    write.csv(edges_df, edges_file_name, row.names = FALSE)
+
+    # Store information in the list
+    all_networks_info[[network_name]] <- list(nodes = nodes_df, edges = edges_df)
+  }
+
+  return(all_networks_info)
+}
+
+# List of network names
+network_names <- c("LAA_network_DMNC_top10", "LAA_network_MCC_top30", "LAA_network_MCC_top40", "LAA_network_DMNC_top20", "LAA_network_MCC_top10", "LAA_network_MNC_top50", "LAA_network_MNC_top40", "LAA_network_MNC_top30", "LAA_network_MCC_top20", "LAA_network_MNC_top20", "LAA_network_MNC_top10", "LAA_network_DMNC_top30", "LAA_network_DMNC_top40", "LAA_network_DMNC_top50", "LAA_network_MCC_top50")
+
+# Call the function
+all_networks_info <- import_networks(network_names)
+```
+
+```{r}
+common_counts <- c() # To store the count of common genes for each top category
+
+# Define categories and algorithms
+categories <- c("top10", "top20", "top30", "top40", "top50")
+algorithms <- c("MCC", "MNC", "DMNC")
+
+for (category in categories) {
+  genes_list <- list()
+
+  for (algorithm in algorithms) {
+    # Construct the network name
+    network_name <- paste("LAA_network", algorithm, category, sep = "_")
+
+    # Extract genes from the nodes data frame
+    genes <- all_networks_info[[network_name]]$nodes$altName
+
+    # Store in the list
+    genes_list[[algorithm]] <- genes
+  }
+
+  # Identify common genes across the algorithms
+  common_genes <- Reduce(intersect, genes_list)
+
+  # Store the count
+  common_counts <- c(common_counts, length(common_genes))
+}
+
+# Create a named vector for plotting
+common_counts_named <- setNames(common_counts, c("Top 10", "Top 20", "Top 30", "Top 40", "Top 50"))
+```
+
+```{r}
+# Create the barplot
+barplot(common_counts_named, xlab = "Top Genes Category", ylab = "Number of Common Genes", main = "Common Genes Across Algorithms", col = "skyblue")
+```
+
+```{r}
+# Using top 50
+
+genes_MCC <- all_networks_info[["LAA_network_MCC_top50"]]$nodes$altName
+genes_MNC <- all_networks_info[["LAA_network_MNC_top50"]]$nodes$altName
+genes_DMNC <- all_networks_info[["LAA_network_DMNC_top50"]]$nodes$altName
+
+# Combine the gene lists into a single vector
+all_genes <- c(genes_MCC, genes_MNC, genes_DMNC)
+
+# Find the common genes
+hub_genes <- names(table(all_genes)[table(all_genes) > 2])
+
+# Print the Hub genes
+hub_genes
+```
+
+# Testing Hub genes performance
+```{r}
+hub_genes <- c("C1QB","C1QC","CACNA1G","COG3","COG6","COPG1","KDELR3","SEC31A","TNNI1" )
+
+set.seed(12345)
+
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+
+experiments = names(AF_Meta)
+names(experiments) = experiments
+
+# For labeling
+t_matrix = get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "t")
+
+# Here we get AUC for pairwise classifiers
+pairwise_500 = pairwise_ds_AF(experiments = experiments,
+                           meta_list = AF_Meta,
+                           t_matrix = t_matrix,
+                           ngenes = 500) #Second page excel
+
+ds_top = getRisk_Stats_AF(Experiment_List = AF_Meta,
+                          limma_t_mat = t_matrix, 
+                          genes = hub_genes)
+
+ds_top_predictions = enframe(lapply(ds_top, function(x) {
+  enframe(x[["SingleAUC"]])
+})) %>% unnest()
+
+colnames(ds_top_predictions) = c("PredictedExperiment", 
+                                 "PredictorExperiment", 
+                                 "meta_auc")
+
+comp_df = left_join(pairwise_500,
+                    ds_top_predictions) %>%
+          dplyr::filter(PredictedExperiment != PredictorExperiment) %>%
+  dplyr::select(PredictorExperiment, 
+                PredictedExperiment,
+                single, meta_auc)
+
+print("Are AUCs better?")
+
+wilcox.test(comp_df$meta_auc,comp_df$single,paired = T,alternative = "greater")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+CTD_Results_LAA <- read.csv("./data/CTD_Results_LAA.csv", header=FALSE, comment.char="#")
+
+colnames(CTD_Results_LAA) <- c(
+  "Input Identifier",
+  "Chemical Name",
+  "Chemical ID",
+  "Chemical Abstract Service Registry Number",
+  "Gene Symbol",
+  "Gene ID",
+  "Organism Name",
+  "Organism ID",
+  "Description of Interaction",
+  "Specific Interaction Actions",
+  "Reference to Scientific Literature"
+)
+
+selected_organisms <- c("Homo sapiens", "Rattus norvegicus", "Mus musculus")
+CTD_Results_LAA <- CTD_Results_LAA[CTD_Results_LAA$'Organism Name' %in% selected_organisms, ]
+
+chemical_counts <- table(CTD_Results_LAA$'Chemical Name')
+chemicals_with_five_or_more_genes <- names(chemical_counts[chemical_counts >= 4])
+CTD_Results_LAA <- CTD_Results_LAA[CTD_Results_LAA$'Chemical Name' %in% chemicals_with_five_or_more_genes, ]
+
+```
+
+```{r}
+CTD_Results_LAA$Interaction_Type <- ifelse(grepl("increases\\^expression", CTD_Results_LAA$`Specific Interaction Actions`), "Increase", ifelse(grepl("decreases\\^expression", CTD_Results_LAA$`Specific Interaction Actions`), "Decrease", NA))
+
+
+
+# Creating a wide data frame
+CTD_Results_LAA_wide <- dcast(CTD_Results_LAA, `Chemical Name` ~ `Gene Symbol`, value.var = "Interaction_Type", fun.aggregate = function(x) paste(unique(x), collapse = ","))
+```
+
+# Manual results curation
+```{r}
+chemicals_of_interest <- c("Acetaminophen", "Calcitriol", "Clofibrate", "Estradiol", "Folic Acid", "pirinixic acid", "Pravastatin", "Resveratrol", "Tretinoin", "Valproic Acid")
+
+subset_data <- CTD_Results_LAA_wide[CTD_Results_LAA_wide$`Chemical Name` %in% chemicals_of_interest, ]
+
+# Replace empty strings with 0
+subset_data[subset_data == ""] <- 0
+
+# Replace all remaining non-zero values with 1
+subset_data[, -1] <- ifelse(subset_data[, -1] != 0, 1, 0)
+
+# Convert to Long Format
+subset_data_long <- subset_data %>%
+  pivot_longer(cols = -`Chemical Name`, names_to = "Gene", values_to = "Value")
+
+subset_data_long_network <- subset_data_long %>% filter(Value==1)
+
+write.csv(subset_data_long_network, file="./drug_targets_result_LAA.csv")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

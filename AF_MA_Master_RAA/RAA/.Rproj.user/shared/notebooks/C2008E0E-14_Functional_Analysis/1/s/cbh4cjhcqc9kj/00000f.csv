@@ -1,0 +1,166 @@
+"0","#Loading necessary libraries"
+"0","library(fgsea)"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"0","library(viper)"
+"2","Lade nötiges Paket: Biobase
+"
+"2","Lade nötiges Paket: BiocGenerics
+"
+"2","
+Attache Paket: ‘BiocGenerics’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:stats’:
+
+    IQR, mad, sd, var, xtabs
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    anyDuplicated, aperm, append, as.data.frame, basename, cbind, colnames, dirname, do.call, duplicated, eval, evalq, Filter,
+    Find, get, grep, grepl, intersect, is.unsorted, lapply, Map, mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+    Position, rank, rbind, Reduce, rownames, sapply, setdiff, sort, table, tapply, union, unique, unsplit, which.max, which.min
+
+"
+"2","Welcome to Bioconductor
+
+    Vignettes contain introductory material; view with 'browseVignettes()'. To cite Bioconductor, see 'citation(""Biobase"")', and
+    for packages 'citation(""pkgname"")'.
+
+"
+"2","Registered S3 method overwritten by 'htmlwidgets':
+  method           from         
+  print.htmlwidget tools:rstudio
+"
+"0","library(progeny)"
+"0","library(OmnipathR)"
+"0","library(decoupleR)"
+"0","library(dplyr)"
+"2","Warnung: Paket ‘dplyr’ wurde unter R Version 4.2.3 erstellt"
+"2","
+Attache Paket: ‘dplyr’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:Biobase’:
+
+    combine
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:BiocGenerics’:
+
+    combine, intersect, setdiff, union
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:stats’:
+
+    filter, lag
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"0","library(tibble)"
+"2","Warnung: Paket ‘tibble’ wurde unter R Version 4.2.3 erstellt"
+"0","library(tidyr)"
+"0","library(ggplot2)"
+"2","Warnung: Paket ‘ggplot2’ wurde unter R Version 4.2.3 erstellt"
+"0","library(pheatmap)"
+"0","library(ggrepel)"
+"0","library(org.Hs.eg.db)"
+"2","Lade nötiges Paket: AnnotationDbi
+"
+"2","Lade nötiges Paket: stats4
+"
+"2","Lade nötiges Paket: IRanges
+"
+"2","Lade nötiges Paket: S4Vectors
+"
+"2","
+Attache Paket: ‘S4Vectors’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:tidyr’:
+
+    expand
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:dplyr’:
+
+    first, rename
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:base’:
+
+    expand.grid, I, unname
+
+"
+"2","
+Attache Paket: ‘IRanges’
+
+"
+"2","Die folgenden Objekte sind maskiert von ‘package:dplyr’:
+
+    collapse, desc, slice
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:grDevices’:
+
+    windows
+
+"
+"2","
+Attache Paket: ‘AnnotationDbi’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    select
+
+"
+"2","
+"
+"0","library(clusterProfiler)"
+"2","
+"
+"2","clusterProfiler v4.6.2  For help: https://yulab-smu.top/biomedical-knowledge-mining-book/
+
+If you use clusterProfiler in published research, please cite:
+T Wu, E Hu, S Xu, M Chen, P Guo, Z Dai, T Feng, L Zhou, W Tang, L Zhan, X Fu, S Liu, X Bo, and G Yu. clusterProfiler 4.0: A universal enrichment tool for interpreting omics data. The Innovation. 2021, 2(3):100141
+"
+"2","
+Attache Paket: ‘clusterProfiler’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:AnnotationDbi’:
+
+    select
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:IRanges’:
+
+    slice
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:S4Vectors’:
+
+    rename
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:stats’:
+
+    filter
+
+"
+"0","library(AnnotationDbi)"
+"0","library(msigdbr)"
+"2","Warnung: Paket ‘msigdbr’ wurde unter R Version 4.2.3 erstellt"
+"0","library(readxl)"
+"2","Warnung: Paket ‘readxl’ wurde unter R Version 4.2.3 erstellt"
+"0","library(writexl)"
+"0","library(openxlsx)"
+"0","library(cowplot)"

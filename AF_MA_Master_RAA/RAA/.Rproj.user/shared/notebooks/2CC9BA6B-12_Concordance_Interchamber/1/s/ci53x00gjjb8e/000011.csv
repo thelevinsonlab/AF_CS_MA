@@ -1,0 +1,5 @@
+"0","RRHO_obj <- RRHO2_initialize(LAA_DE_common, RAA_DE_common, labels = c(""LAA AF-CS Gene Rank"", ""RAA AF-CS Gene Rank""), log10.ind=TRUE)"
+"0",""
+"0",""
+"0","pdf(""data/figures/sup/SupplementalFigure10.pdf"", width = 14, height = 10)"
+"0","RRHO2_heatmap(RRHO_obj)"

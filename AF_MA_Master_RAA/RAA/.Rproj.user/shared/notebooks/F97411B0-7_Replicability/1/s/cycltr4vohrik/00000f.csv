@@ -1,0 +1,22 @@
+"0","library(PLIER)"
+"0","library(reshape2)"
+"2","
+Attache Paket: ‘reshape2’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:tidyr’:
+
+    smiths
+
+"
+"0","library(ROCR)"
+"0","library(fgsea)"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"0","library(WriteXLS)"
+"0","library(tidyverse)"
+"0","library(cowplot)"
+"0",""
+"0","source(""src/utils_AF_Meta.R"")"

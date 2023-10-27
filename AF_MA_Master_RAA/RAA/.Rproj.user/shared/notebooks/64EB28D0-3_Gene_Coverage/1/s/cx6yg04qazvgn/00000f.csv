@@ -1,0 +1,7 @@
+"0","# multiplied by 1000 to get back to original scale"
+"0","median_genes <- median(sample.size$genes) * 1000  "
+"0","range_genes <- range(sample.size$genes) * 1000    "
+"0",""
+"0","# Create the annotation text"
+"0","annotation_text1 <- paste0(""Median Gene Coverage: "", round(median_genes, 0), "" genes, Range: "", "
+"0","                           round(range_genes[1], 0), ""-"", round(range_genes[2], 0))"

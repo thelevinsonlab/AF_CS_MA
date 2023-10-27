@@ -1,0 +1,2 @@
+"0","# Extracting the names from the AF_Meta list to cread an ids variable for further analysis"
+"0","ids <- data.frame(ID = names(AF_Meta))"

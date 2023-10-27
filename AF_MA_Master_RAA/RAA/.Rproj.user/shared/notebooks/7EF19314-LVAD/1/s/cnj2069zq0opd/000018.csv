@@ -1,0 +1,6 @@
+"0","# Create labels"
+"0","labels <- c(""A)"", ""B)"")"
+"0",""
+"0","combined_plot <- grid.arrange(bar_plot + labs(title = labels[1]),"
+"0","             pie_plot + labs(title = labels[2]),"
+"0","             ncol = 2, top = """")"

@@ -1,0 +1,10 @@
+"0","library(readxl)"
+"2","Warnung: Paket ‘readxl’ wurde unter R Version 4.2.3 erstellt"
+"0","library(dplyr)"
+"0","library(RRHO2)"
+"2","Lade nötiges Paket: VennDiagram
+"
+"2","Lade nötiges Paket: grid
+"
+"2","Lade nötiges Paket: futile.logger
+"

@@ -1,0 +1,119 @@
+---
+title: "GSE69890"
+output: html_document
+date: "2023-01-10"
+---
+
+```{r}
+library(tidyverse)  
+library(limma)
+library(edgeR)
+library(stringr)
+```
+
+```{r}
+#1) Read gene expression data 
+df= read.table("data/raw_counts.txt", header = TRUE, sep = ",")
+rownames(df) <- df[,1]
+df[,1] <- NULL
+
+#2) Processing the phenotypes file for African-Americans
+phenotypes_aa = read.table("data/phenotypes_aa.txt", header = TRUE, sep = ",")
+
+phenotypes_aa <- phenotypes_aa %>%
+  filter(X %in% c("sexFemale", "AtrialRhythm")) %>% column_to_rownames(var="X") %>% t() %>% as.data.frame() %>% mutate(Sex = ifelse(sexFemale == "1.0", "F", ifelse(sexFemale == "0.0", "M",sexFemale))) %>% mutate(condition  = ifelse(AtrialRhythm == "Yes AF/AF Rhythm","AF", ifelse(AtrialRhythm == "No AF/Sinus Rhythm", "SR",ifelse(AtrialRhythm == "Yes AF/Sinus Rhythm", "AF",AtrialRhythm)))) %>% dplyr::select(-sexFemale) %>% t() %>% as.data.frame() %>% rownames_to_column(var="X")
+
+#3) Processing the phenotypes file for Europeans
+phenotypes_euro = read.table("data/phenotypes_euro.txt", header = TRUE, sep = ",")
+
+phenotypes_euro <- phenotypes_euro %>%
+  filter(X %in% c("sexFemale", "AtrialRhythm")) %>% column_to_rownames(var="X") %>% t() %>% as.data.frame() %>% mutate(Sex = ifelse(sexFemale == "1.0", "F", ifelse(sexFemale == "0.0", "M",sexFemale))) %>% mutate(condition  = ifelse(AtrialRhythm == "Yes AF/AF Rhythm","AF", ifelse(AtrialRhythm == "No AF/Sinus Rhythm", "SR",ifelse(AtrialRhythm == "Yes AF/Sinus Rhythm", "AF",AtrialRhythm)))) %>% dplyr::select(-sexFemale) %>% t() %>% as.data.frame() %>% rownames_to_column(var="X")
+
+#4) Merging the datasets and eliminating those without phenotype information
+phenotypes <- phenotypes_aa %>% inner_join(phenotypes_euro, by = "X") %>% column_to_rownames(var="X") %>% dplyr::select(one_of(colnames(df)))
+
+df <- df %>% dplyr::select(colnames(phenotypes))
+
+cols <- match(colnames(df),colnames(phenotypes))
+phenotypes <- phenotypes[,cols]
+GSE69890_targets <- phenotypes %>% t() %>% as.data.frame() %>% dplyr::select(-AtrialRhythm) %>% rownames_to_column(var = "sample") 
+
+colnames(df) == GSE69890_targets$sample
+
+save(GSE69890_targets, file = "./GSE69890_targets.ro")
+
+#5) filter & normalize, and save as count file.
+#create DGE class object
+group <- GSE69890_targets$condition
+dge <- DGEList(counts=df, group=group)
+
+#detect and remove low expressed genes
+keep <- filterByExpr(dge)
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+
+# Apply normalization method TMM (trimmed mean of M)
+dge <- calcNormFactors(dge)
+
+# use limma voom to transform count data to log2 counts per million
+v <- voom(dge, plot=TRUE)
+
+GSE69890_counts= v$E
+```
+
+```{r}
+#Since currently our dataset uses Ensembl IDs, but most of our resources are based on UniProt or gene symbols, we need to do some identifier Kung-Fu!
+
+# Gene ids and symbols retrieved from Biomart (Human genome 38):
+gene_id_symbol <- read.csv(file.path('C:/Users/sergi/OneDrive/Documents/PhD Heidelberg/Projects/AF_MA_Master_LAA/src/gene_id_symbol.txt'), header = TRUE)
+  rownames(gene_id_symbol) <- gene_id_symbol$id
+  
+# Remove all genes that have no gene id in the symbols df
+GSE69890_counts <- GSE69890_counts[rownames(GSE69890_counts) %in% 
+                               rownames(gene_id_symbol),]
+                               
+# Remove all ids that are not in our count dataframe
+gene_id_symbol <- gene_id_symbol[rownames(gene_id_symbol) %in% 
+                                   row.names(GSE69890_counts),]
+
+# Get repeated symbols in symbols df
+repeated_symbols <- gene_id_symbol %>% group_by(symbol) %>% 
+  summarise(count=n()) %>% arrange(desc(count)) %>% filter(count > 1) %>% 
+  dplyr::select(symbol) %>% t() %>% unname() %>% c()
+
+repeated_symbols <- as.data.frame(repeated_symbols)
+
+# Now let's convert ids with the pseudo dictionary
+for(i in 1:length(GSE69890_counts[,1]))
+{
+  # Only update the ids and skip the already present symbols
+  if (!row.names(GSE69890_counts)[i] %in% repeated_symbols){
+    row.names(GSE69890_counts)[i] <- 
+      gene_id_symbol[row.names(GSE69890_counts)[i],]$symbol
+  }
+}
+```
+
+```{r}
+library(data.table)
+dt <- as.data.frame(GSE69890_counts)
+dt <- dt %>% rownames_to_column(var="gene") %>% distinct(gene, .keep_all = TRUE)
+dt <- dt %>% column_to_rownames(var="gene")
+dt_matrix <- as.matrix(dt)
+
+print("Count of repeated values")
+length(which(table(rownames(dt_matrix))>1))
+```
+
+
+
+```{r}
+save(dt_matrix, file = "./GSE69890_counts.ro")
+```
+
+
+
+
+
+
+
+

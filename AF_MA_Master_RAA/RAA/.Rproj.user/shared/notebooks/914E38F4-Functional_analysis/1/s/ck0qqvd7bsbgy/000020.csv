@@ -1,0 +1,17 @@
+"0","cells_ln <- cell_marker_data %>% filter(tissue_class == ""Lymph node"")%>%
+    dplyr::select(cell_name, Symbol) %>%
+    tidyr::unnest()
+"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c()`.[39m"
+"0",""
+"0","y_ln <- GSEA(gene_list, TERM2GENE = cells_ln)"
+"2","preparing geneSet collections...
+"
+"2","GSEA analysis...
+"
+"2","Warnung: There are ties in the preranked stats (59.33% of the list).
+The order of those tied genes will be arbitrary, which may produce unexpected results."
+"2","no term enriched under specific pvalueCutoff...
+"
+"0","y_ln_dataset <- y_ln@result"

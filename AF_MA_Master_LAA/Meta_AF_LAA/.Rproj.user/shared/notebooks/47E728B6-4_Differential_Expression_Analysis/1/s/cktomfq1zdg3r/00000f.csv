@@ -1,0 +1,8 @@
+"0","lfc_matrix = data.frame(get_all_limma_AF(meta_list = AF_Meta,"
+"0","                            limma_column = ""logFC""),"
+"0","                        check.names = F) %>% "
+"0","  gather(""experiment"",""lfc"") %>% na.omit()"
+"0",""
+"0","deg_stats = list(""pvalue"" = p_matrix,"
+"0","                 ""tvalue"" = t_matrix,"
+"0","                 ""lfc"" = lfc_matrix)"

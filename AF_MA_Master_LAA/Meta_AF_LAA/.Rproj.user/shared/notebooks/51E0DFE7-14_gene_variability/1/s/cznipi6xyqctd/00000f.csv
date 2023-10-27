@@ -1,0 +1,13 @@
+"0","# Performing a 2-way anova with interaction term (AF/study)"
+"0",""
+"0","anova_study_scale = run_anovastats_AF(numeric_matrix = meta_gex_scale[genes,],"
+"0","                                   targets = meta_targets) #For sup"
+"2","
+Attache Paket: ‘fastmatch’
+
+"
+"2","Das folgende Objekt ist maskiert ‘package:dplyr’:
+
+    coalesce
+
+"

@@ -1,0 +1,18 @@
+"0","example1_mapped <- string_db$map(LAA_DE_genes, ""gene"", removeUnmappedRows = TRUE )"
+"2","trying URL 'https://stringdb-static.org/download/protein.aliases.v11.5/9606.protein.aliases.v11.5.txt.gz'
+"
+"2","Content type 'application/octet-stream'"
+"2"," length 21726816 bytes (20.7 MB)
+"
+"2","downloaded 20.7 MB
+
+"
+"2","trying URL 'https://stringdb-static.org/download/protein.info.v11.5/9606.protein.info.v11.5.txt.gz'
+"
+"2","Content type 'application/octet-stream'"
+"2"," length 1901833 bytes (1.8 MB)
+"
+"2","downloaded 1.8 MB
+
+"
+"1","Warning:  we couldn't map to STRING 3% of your identifiers"

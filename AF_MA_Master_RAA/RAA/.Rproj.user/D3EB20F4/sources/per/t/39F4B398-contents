@@ -1,0 +1,420 @@
+---
+title: "7_Reproducibility_Figures"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+date: "2023-02-26"
+---
+
+# 1. Loading Packages and Functions
+```{r}
+library(PLIER)
+library(reshape2)
+library(ROCR)
+library(fgsea)
+library(WriteXLS)
+library(tidyverse)
+library(cowplot)
+
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Main data object importing
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+# 3. Preparing data
+```{r}
+# We extract the names of the experiments from the "AF_Meta" object.
+experiments = names(AF_Meta)
+names(experiments) = experiments
+
+experiment_size = sort(unlist(lapply(AF_Meta,
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+```
+
+# 4. Jaccard Index calculation
+```{r}
+# The Jaccard Index is a statistic used for comparing the similarity and diversity of sample sets. The Jaccard coefficient measures the similarity between finite sample sets and is defined as the size of the intersection divided by the size of the union of the sample sets.
+
+# Extra step use all data first to compare platform coverage
+study_genelist_all = lapply(AF_Meta, function(x){
+  gene_list = x$AF_limma[[1]]
+  return(gene_list)
+}) 
+
+# Here we compute the Jaccard Index for each pair of experiments in the AF_Meta object, create a data frame with pairwise comparisons and then calculate the average Jaccard Index for each study.
+
+jaccard_res_all =  enframe(lapply(experiments, function(set_a){
+  genes_a = study_genelist_all[[set_a]]
+  j_ix_a = lapply(experiments, function(set_b){
+    
+    genes_b = study_genelist_all[[set_b]]
+    
+    #Jaccard Index
+    j_ix = length(intersect(genes_a,genes_b))/length(union(genes_a,genes_b))
+    
+    return(j_ix)
+  })
+  
+  j_ix_a = enframe(j_ix_a, "StudyB","JaccardIx") %>% 
+    unnest()
+  
+  return(j_ix_a)
+  
+}), "StudyA") %>% unnest() %>%
+  mutate(StudyA = factor(StudyA,
+                         levels = names(experiment_size)),
+         StudyB = factor(StudyB,
+                         levels = names(experiment_size)))
+
+
+summary_concordance = jaccard_res_all %>% 
+                      dplyr::filter(StudyA != StudyB) %>%
+                      group_by(StudyA) %>%
+                      summarise(mean(JaccardIx))
+
+print("Summary concordance")
+mean(summary_concordance[[2]])
+
+```
+
+# 5. Creating a list of top 500 genes
+```{r}
+# Here we will create a list of the top 500 genes from each experiment in the AF_Meta object. These genes will be used in the subsequent analysis.
+
+study_genelist = purrr::map(AF_Meta, ~dplyr::slice(.x$AF_limma, 1:500)[[1]]) # get top 500 genes
+```
+
+# 6. Creating a matrix/data-frame with pairwise comparisons
+```{r}
+# We create a matrix that compares each pair of experiments using the top 500 genes.
+jaccard_res =  enframe(lapply(experiments, function(set_a){
+  genes_a = study_genelist[[set_a]]
+  j_ix_a = lapply(experiments, function(set_b){
+    
+    genes_b = study_genelist[[set_b]]
+    
+    #Jaccard Index
+    j_ix = length(intersect(genes_a,genes_b))/length(union(genes_a,genes_b))
+    
+    return(j_ix)
+  })
+  
+  j_ix_a = enframe(j_ix_a, "StudyB","JaccardIx") %>% 
+    unnest()
+  
+  return(j_ix_a)
+  
+}), "StudyA") %>% unnest() %>%
+  mutate(StudyA = factor(StudyA,
+                         levels = names(experiment_size)),
+         StudyB = factor(StudyB,
+                         levels = names(experiment_size)))
+```
+
+# 7. Data Manipulation for plots
+```{r}
+# This section prepares data for the creation of plots. Here we reshape the data, handle missing values, and save the final data frame as an RDS file.
+jaccard_res = jaccard_res %>% spread(StudyA,JaccardIx) #First page excel
+
+jaccard_res_mat = (as.matrix(jaccard_res[,-1]))
+rownames(jaccard_res_mat) = jaccard_res[[1]]
+
+jaccard_res_mat[upper.tri(jaccard_res_mat[names(experiment_size),
+                                          names(experiment_size)])] = NA
+
+jaccard_res_mat[jaccard_res_mat==1] = NA
+
+jaccard_df = reshape2::melt(t(jaccard_res_mat),na.rm = T) %>% 
+             mutate(Var2 = factor(as.character(Var2),
+                                  levels = rev(names(experiment_size))))
+
+saveRDS(jaccard_df, file = "data/figure_objects/jaccard_df.rds")
+
+# Results reported
+
+res_df = jaccard_df %>% dplyr::filter(Var1 != Var2)
+
+# We finally print the mean Jaccard Index.
+print("Mean Jaccard Index")
+mean(res_df$value)
+```
+
+# 8. Applying functions for transfer learning/disease score as a classifier
+```{r}
+# In this section, we will apply the multiple functions for the application of transfer learning and calculation of disease scores as a classifier.
+
+t_matrix = get_all_limma_AF(meta_list = AF_Meta,
+                         limma_column = "t")
+```
+
+
+```{r}
+# Here we get AUC for pairwise classifiers
+pairwise_200 = pairwise_ds_AF(experiments = experiments,
+                           meta_list = AF_Meta,
+                           t_matrix = t_matrix,
+                           ngenes = 500) #Second page excel
+
+# Results from paper
+
+pairwise_res = pairwise_200 %>%
+  dplyr::filter(PredictorExperiment != 
+                  PredictedExperiment)
+
+print("Median AUROC")
+
+median(pairwise_res$single)
+
+print("Mean AUROC")
+
+mean(pairwise_res$single)
+
+
+
+saveRDS(pairwise_200[,c("PredictorExperiment", 
+                        "PredictedExperiment", 
+                        "single")], file = "data/figure_objects/pairwise_200.rds")
+```
+# 9. Enrichment scores
+
+```{r}
+# Here we will calculate the enrichment scores for each experiment by creating two lists of differentially expressed genes (upregulated and downregulated), calculate the enrichment scores, and then save the results as RDS files.
+
+study_deg_list_up = lapply(AF_Meta, function(x){
+  deg = dplyr::slice(x$AF_limma,
+                     1:500) %>%
+    filter(t >0)
+  return(deg[[1]])
+})
+
+study_deg_list_down = lapply(AF_Meta, function(x){
+  deg = dplyr::slice(x$AF_limma,
+                     1:500) %>%
+    filter(t <0)
+  return(deg[[1]])
+})
+
+# upregulation
+
+up_ES = lapply(experiments, function(x){
+  
+  stat_rank = AF_Meta[[x]][["AF_limma"]][["t"]]
+  names(stat_rank) = AF_Meta[[x]][["AF_limma"]][["ID"]]
+  stat_rank = sort(stat_rank)
+  set.seed(1234)
+  
+  up_row = as_tibble(fgsea(pathways = study_deg_list_up,
+                           stats = stat_rank,nperm = 1000)) %>%
+    dplyr::select(pathway,ES)
+})
+
+up_ES = up_ES %>% 
+  enframe("Reference") %>% unnest()
+
+colnames(up_ES) = c("Reference","DEG","ES")
+
+saveRDS(up_ES, 
+        file = "data/figure_objects/up_ES.rds")
+
+
+# downregulation
+
+down_ES = lapply(experiments, function(x){
+  
+  stat_rank = AF_Meta[[x]][["AF_limma"]][["t"]]
+  names(stat_rank) = AF_Meta[[x]][["AF_limma"]][["ID"]]
+  stat_rank = sort(stat_rank)
+  set.seed(1234)
+  
+  up_row = as_tibble(fgsea(pathways = study_deg_list_down,
+                           stats = stat_rank,nperm = 1000)) %>%
+    dplyr::select(pathway,ES)
+})
+
+down_ES = down_ES %>% 
+  enframe("Reference") %>% unnest()
+
+colnames(down_ES) = c("Reference","DEG","ES")
+
+saveRDS(down_ES, 
+        file = "data/figure_objects/down_ES.rds")
+
+
+## Correlations of reproducibility measures: 
+## Here we want to know if high mean enrichment scores
+## for a given study are correlated with their mean AUCs coming
+## from the classification using the disease score
+
+pairwise_200 = dplyr::filter(pairwise_200,
+                             PredictorExperiment != PredictedExperiment) %>% 
+               mutate(pairwise = paste(PredictorExperiment,
+                                       PredictedExperiment,
+                                       sep="_")) %>%
+  dplyr::select(pairwise,single)
+
+up_ES = dplyr::filter(up_ES,
+                      DEG != Reference) %>%
+              mutate(pairwise = paste(DEG,
+                               Reference,
+                               sep="_")) %>%
+  dplyr::select(pairwise,ES)
+
+median(up_ES$ES)
+sum(up_ES$ES<0)
+
+
+down_ES = dplyr::filter(down_ES,
+                      DEG != Reference) %>%
+         mutate(pairwise = paste(DEG,
+                          Reference,
+                          sep="_")) %>%
+  dplyr::select(pairwise,ES)
+
+median(down_ES$ES)
+sum(down_ES$ES>0)
+
+reprod_cor_data = left_join(pairwise_200,
+          left_join(up_ES, down_ES, 
+                    by = "pairwise"),
+          by = "pairwise")
+
+print("Correlation of ES with DS (up and down)")
+
+cor.test(reprod_cor_data$single,reprod_cor_data$ES.x,method = "pearson")
+cor.test(reprod_cor_data$single,reprod_cor_data$ES.y,method = "pearson")
+
+saveRDS(reprod_cor_data, file = "data/figure_objects/reprod_cor_data.rds")
+```
+
+# 10. Creating plots
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+experiments = names(AF_Meta)
+names(experiments) = experiments
+
+# For labeling
+experiment_size = sort(unlist(lapply(AF_Meta,
+                                     function(x) ncol(x$GEX))),
+                       decreasing = T)
+```
+
+```{r}
+#1. Jaccard plot
+
+jaccard_df = readRDS(file = "data/figure_objects/jaccard_df.rds")
+
+
+jaccard_tile = ggplot(jaccard_df, aes(x = Var1, 
+                                      y = Var2,
+                                      fill = value)) +
+  geom_tile() +
+  theme_minimal() + xlab("Predicted") +
+  ylab("Predictor") +
+  theme(panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.text.x = element_text(angle = 90,
+                                   hjust = 1),
+        axis.text = element_text(size=10),
+        legend.key.size = unit(.6, "cm"),
+        legend.text = element_text(size = 9)) +
+  scale_fill_gradientn(colours=RColorBrewer::brewer.pal(9, 'Spectral'), limits=c(0, .35)) +
+  labs(fill = "Jaccard \nIndex")
+
+jac_legend = get_legend(jaccard_tile)
+
+jaccard_tile = jaccard_tile + theme(legend.position = "none")
+
+#2. AUC of Disease scores
+
+pairwise_200 = readRDS(file = "data/figure_objects/pairwise_200.rds")
+
+pcolors = RColorBrewer::brewer.pal(9, 'YlGnBu')[1:6]
+
+pairwise_plot_200 = pairwise_200 %>% ggplot(aes(x=factor(PredictedExperiment,
+                                                         levels = rev(names(experiment_size))),
+                                                y=factor(PredictorExperiment,
+                                                         levels = names(experiment_size))
+                                                ,fill = single)) + geom_tile() +
+  theme_minimal() + xlab("Predicted") +
+  ylab("Predictor") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        axis.text = element_text(size=10),
+        axis.title = element_text(size=12),
+        legend.text = element_text(size = 9)) +
+  scale_fill_gradientn(colours= pcolors, limits=c(0, 1)) + 
+  coord_flip() + labs(fill = "AUC")
+
+auc_legend = get_legend(pairwise_plot_200)
+
+pairwise_plot_200 = pairwise_plot_200 + theme(legend.position = "none")
+
+#3. ES plots
+
+pcolors_up = RColorBrewer::brewer.pal(9, 'YlOrRd')[1:7]
+pcolors_down = rev(RColorBrewer::brewer.pal(9, 'Purples')[1:7])
+pcolors = c(pcolors_down,pcolors_up)
+
+#upregulation
+up_ES = readRDS(file = "data/figure_objects/up_ES.rds")
+
+up_ES_plot = up_ES %>% ggplot(aes(x=factor(Reference,
+                                           levels = rev(names(experiment_size))),
+                                  y=factor(DEG,
+                                           levels = names(experiment_size))
+                                  ,fill = ES)) + geom_tile() +
+  theme_minimal() + xlab("Reference") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        axis.text = element_text(size=10),
+        axis.title = element_text(size=12),
+        axis.title.x = element_blank(),
+        legend.text = element_text(size = 9)) +
+  scale_fill_gradientn(colours= pcolors, limits=c(-1, 1)) + 
+  coord_flip() + ggtitle("Upregulated genes")
+
+up_ES_plot = up_ES_plot + theme(legend.position = "none")
+
+#downregulation
+
+down_ES = readRDS(file = "data/figure_objects/down_ES.rds")
+
+down_ES_plot = down_ES %>% ggplot(aes(x=factor(Reference,
+                                           levels = rev(names(experiment_size))),
+                                  y=factor(DEG,
+                                           levels = names(experiment_size))
+                                  ,fill = ES)) + geom_tile() +
+  theme_minimal() + xlab("Reference") +
+  ylab("") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        axis.text = element_text(size=10),
+        axis.title = element_text(size=12),
+        legend.text = element_text(size = 9)) +
+  scale_fill_gradientn(colours= pcolors, limits=c(-1,1)) + 
+  coord_flip() + ggtitle("Downregulated genes")
+
+
+es_legend = get_legend(down_ES_plot)
+
+down_ES_plot = down_ES_plot + theme(legend.position = "none")
+
+# Combine all plots in a single row
+final_plot = plot_grid(jaccard_tile, jac_legend, pairwise_plot_200, auc_legend, up_ES_plot, down_ES_plot, es_legend, 
+                       ncol = 7, rel_widths = c(1,0.25,1, 0.25, 1,1,0.25), align = "h", 
+                       labels = c("E", "", "F", "", "G", "H", ""))
+
+
+
+
+pdf("data/figures/Figure3.pdf",
+    width = 18,
+    height = 4)
+
+final_plot
+
+dev.off()
+```

@@ -1,0 +1,12 @@
+"0","n_genes = c(50,100,200,500,1000)"
+"0","names(n_genes) = n_genes"
+"0",""
+"0","pairwise_auc = lapply(n_genes, pairwise_ds_AF, "
+"0","                      experiments = experiments,"
+"0","                      meta_list = AF_Meta,"
+"0","                      t_matrix = t_matrix) "
+"0",""
+"0","pairwise_auc = enframe(pairwise_auc,name = ""n_genes"") %>% unnest()"
+"2","Warnung: [38;5;232m`cols` is now required when using `unnest()`.
+[36mℹ[38;5;232m Please use `cols = c(value)`.[39m"
+"0","saveRDS(pairwise_auc, file =  ""data/figure_objects/robust_ds.rds"")"

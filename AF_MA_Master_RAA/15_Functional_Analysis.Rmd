@@ -1,0 +1,421 @@
+---
+title: "15_Functional_Analysis"
+output: html_document
+date: "2023-02-26"
+---
+
+```{r}
+#Loading necessary libraries
+library(fgsea)
+library(viper)
+library(progeny)
+library(OmnipathR)
+library(decoupleR)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(ggplot2)
+library(pheatmap)
+library(ggrepel)
+library(org.Hs.eg.db)
+library(clusterProfiler)
+library(AnnotationDbi)
+library(msigdbr)
+library(readxl)
+library(writexl)
+library(openxlsx)
+library(cowplot)
+```
+
+```{r}
+# Load the CS data
+RAA_gene_rank <- read_excel("~/PhD Heidelberg/Projects/AF_MA_Master_RAA/SupplementalTable2.xlsx")
+
+# Making some transformations to generate the ranked gene list 
+RAA_gene_rank$fcSign=sign(RAA_gene_rank$mean_lfc)
+RAA_gene_rank$logP=-log10(RAA_gene_rank$fisher_pvalue)
+RAA_gene_rank$score=RAA_gene_rank$logP/RAA_gene_rank$fcSign
+RAA_gene_rank <- RAA_gene_rank[order(-RAA_gene_rank$score),]
+
+# Generating the ranked gene list
+RAA_gene_list <- RAA_gene_rank$score
+names(RAA_gene_list) <- RAA_gene_rank$gene
+```
+
+```{r}
+# Perform Gene Set Enrichment Analysis (GSEA) on the gene list for different categories
+# Categories include Biological Process (BP), Cellular Component (CC), Molecular Function (MF),
+# Hallmark gene sets, KEGG and Reactome databases
+
+set.seed(123)
+
+hs_c5_BP_sets <- msigdbr(
+  species = "Homo sapiens",
+  category = "C5", subcategory = "GO:BP"
+)
+
+gsea_results_bp <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_c5_BP_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_BP_table <- gsea_results_bp@result
+
+hs_c5_CC_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C5", subcategory = "GO:CC"
+)
+
+gsea_results_CC <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_c5_CC_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_CC_table <- gsea_results_CC@result
+
+hs_c5_MF_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C5", subcategory = "GO:MF"
+)
+
+gsea_results_MF <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_c5_MF_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_MF_table <- gsea_results_MF@result
+
+GO_datasets <- rbind(gsea_results_BP_table, gsea_results_CC_table, gsea_results_MF_table)
+
+
+hs_hallmark_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "H"
+)
+
+gsea_results <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_hallmark_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_hallmark_table <- gsea_results@result
+
+
+hs_KEGG_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C2", subcategory = "CP:KEGG"
+)
+
+gsea_results <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_KEGG_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_KEGG_table <- gsea_results@result
+
+
+hs_KEGG_sets <- msigdbr(
+  species = "Homo sapiens", # Replace with species name relevant to your data
+  category = "C2", subcategory = "CP:REACTOME"
+)
+
+gsea_results <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_KEGG_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_Reactome_table <- gsea_results@result
+
+#Combining all the results into a single dataframe
+msigdb_datasets <- rbind(GO_datasets, gsea_results_Reactome_table, gsea_results_KEGG_table, gsea_results_hallmark_table)
+```
+
+```{r}
+# Perform GSEA on miRNA data
+set.seed(1234)
+
+hs_c5_mir_sets <- msigdbr(
+  species = "Homo sapiens",
+  category = "C3", subcategory = "MIR:MIRDB"
+)
+
+gsea_results_bp <- GSEA(
+  geneList = RAA_gene_list, # Ordered ranked gene list
+  minGSSize = 25, # Minimum gene set size
+  maxGSSize = 500, # Maximum gene set set
+  pvalueCutoff = 0.05, # p-value cutoff
+  eps = 0, # Boundary for calculating the p value
+  seed = TRUE, # Set seed to make results reproducible
+  pAdjustMethod = "BH", # Benjamini-Hochberg correction
+  TERM2GENE = dplyr::select(
+    hs_c5_mir_sets,
+    gs_name,
+    gene_symbol
+  )
+)
+
+gsea_results_mir_table <- gsea_results_bp@result
+```
+
+```{r}
+# Prepare the matrix for Univariate Linear Model (ULM) from the gene rank data
+
+CS_rank <- RAA_gene_rank %>% column_to_rownames("gene") %>%
+  dplyr::select(mean_lfc, mean_t, fisher_pvalue) %>% 
+  filter(!is.na(mean_t)) %>% as.matrix()
+```
+
+```{r}
+# Get interaction network from OmniPath
+net <- get_collectri(organism='human', split_complexes=FALSE)
+```
+
+```{r}
+# Run ULM to identify relevant transcription factors (TFs)
+contrast_acts_tf <- run_ulm(mat=CS_rank[, 'mean_t', drop=FALSE], net=net, .source='source', .target='target',
+                  .mor='mor', minsize = 5)
+
+contrast_acts_tf <- contrast_acts_tf[order(contrast_acts_tf$p_value),]
+```
+
+
+```{r}
+# Get pathway network using Progeny
+
+net_pathway <- get_progeny(organism = 'human', top = 500)
+
+CS_rank_pathway <- RAA_gene_rank %>% column_to_rownames("gene") %>%
+  dplyr::select(mean_t) %>% 
+  filter(!is.na(mean_t)) %>% as.matrix()
+```
+
+
+```{r}
+# Run Multivariate Linear Model (MLM) to identify pathways
+
+contrast_acts_pathway <- run_mlm(mat=CS_rank_pathway, net=net_pathway, .source='source', .target='target',
+                  .mor='weight', minsize = 5)
+
+
+contrast_acts_pathway <- contrast_acts_pathway[order(contrast_acts_pathway$p_value),]
+```
+
+
+```{r}
+# Save all the results into an Excel file with different sheets for different categories
+wb <- createWorkbook()
+
+# Add sheets to the workbook
+addWorksheet(wb, "GO")
+addWorksheet(wb, "Reactome")
+addWorksheet(wb, "KEGG")
+addWorksheet(wb, "Hallmark")
+addWorksheet(wb, "miRNA")
+addWorksheet(wb, "TF")
+addWorksheet(wb, "Pathways")
+
+# Write data to the sheets
+writeData(wb, "GO", GO_datasets)
+writeData(wb, "Reactome", gsea_results_Reactome_table)
+writeData(wb, "KEGG", gsea_results_KEGG_table)
+writeData(wb, "Hallmark", gsea_results_hallmark_table)
+writeData(wb, "miRNA", gsea_results_mir_table)
+writeData(wb, "TF", contrast_acts_tf)
+writeData(wb, "Pathways", contrast_acts_pathway)
+
+# Save the workbook
+saveWorkbook(wb, "Functional_analysis_results_RAA.xlsx", overwrite = TRUE)
+```
+
+
+```{r}
+# Filter and format the results of each process accordingly and create plots
+
+#GSEA
+msigdb_filtering = msigdb_datasets %>%
+  arrange(-log2(p.adjust) * sign(NES)) %>%
+  mutate(dir_reg = sign(NES),
+         log_pval = -log10(p.adjust),
+         Sign = ifelse(NES < 0, -1, 1)) %>%
+  arrange(desc(Sign), ifelse(NES < 0, -log_pval, log_pval)) %>%
+  group_by(Sign) %>%
+  top_n(25, wt = log_pval)
+
+
+MSIGDB_plot <- ggplot(msigdb_filtering, aes(x = reorder(ID, log_pval * Sign), y = log_pval, fill = NES)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = -log10(0.25), linetype = "dashed", color = "black") +
+    scale_fill_gradient2(low = "darkblue", high = "darkred", 
+                         mid = "whitesmoke", midpoint = 0) +
+    theme_minimal() +
+    coord_flip() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.y = element_text(angle = 0, hjust = 1, size =10, face= "bold"),
+          axis.text.x = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("") +
+    ylab("-log10(BH p-value)") +
+  theme(legend.position = "none")
+
+
+#miRNAs
+mir_filtering = gsea_results_mir_table %>%
+  mutate(log_pval = -log10(p.adjust),
+         Sign = ifelse(NES < 0, -1, 1)) %>%
+  arrange(desc(Sign), ifelse(NES < 0, -log_pval, log_pval)) %>%
+  group_by(Sign) %>%
+  top_n(25, wt = log_pval)
+
+
+miRNA_plot <- ggplot(mir_filtering, aes(x = reorder(ID, log_pval * Sign), y = log_pval, fill = NES)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = -log10(0.25), linetype = "dashed", color = "black") +
+    scale_fill_gradient2(low = "darkblue", high = "darkred", 
+                         mid = "whitesmoke", midpoint = 0) +
+    theme_minimal() +
+    coord_flip() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.y = element_text(angle = 0, hjust = 1, size =10, face= "bold"),
+          axis.text.x = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("") +
+    ylab("-log10(BH p-value)") +
+  theme(legend.position = "none")
+  
+#TF
+tf_filtering = contrast_acts_tf %>% dplyr::filter(p_value < 0.05) %>%
+  mutate(log_pval = -log10(p_value),
+         Sign = ifelse(score < 0, "Negative", "Positive")) %>%
+  arrange(desc(Sign), ifelse(score < 0, -log_pval, log_pval)) %>%
+  group_by(Sign) %>%
+  top_n(25, wt = log_pval)
+
+TF_plot <- ggplot(tf_filtering, aes(x = reorder(source, log_pval * score), y = log_pval, fill = score)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = -log10(0.25), linetype = "dashed", color = "black") +
+    scale_fill_gradient2(low = "darkblue", high = "darkred", 
+                         mid = "whitesmoke", midpoint = 0) +
+    theme_minimal() +
+    coord_flip() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.y = element_text(angle = 0, hjust = 1, size =10, face= "bold"),
+          axis.text.x = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("") +
+    ylab("-log10(BH p-value)") +
+  theme(legend.position = "none") 
+
+#Pathways
+pathway_filtering = contrast_acts_pathway %>%
+  arrange(-log2(p_value) * sign(score)) %>%
+  mutate(dir_reg = sign(score),
+         log_pval = -log10(p_value),
+         Sign = ifelse(score < 0, "Negative", "Positive")) %>%
+  arrange(desc(Sign), ifelse(score < 0, -log_pval, log_pval))
+
+Pathway_plot <- ggplot(pathway_filtering, aes(x = reorder(source, log_pval * score), y = log_pval, fill = score)) +
+    geom_bar(stat = "identity") +
+    geom_hline(yintercept = -log10(0.25), linetype = "dashed", color = "black") +
+    scale_fill_gradient2(low = "darkblue", high = "darkred", 
+                         mid = "whitesmoke", midpoint = 0) +
+    theme_minimal() +
+    coord_flip() +
+    theme(axis.title = element_text(face = "bold", size = 12),
+          axis.text.y = element_text(angle = 0, hjust = 1, size =10, face= "bold"),
+          axis.text.x = element_text(size =10, face= "bold"),
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank()) +
+    xlab("") +
+    ylab("-log10(BH p-value)") +
+  theme(legend.position = "none")
+```
+
+```{r}
+# Create empty plot for aesthetic purposes
+empty_plot <- ggplot() + theme_void()
+
+# Combine and save all plots
+pdf("./Functional_analysis_RAA_results.pdf",
+    width = 18.3,
+    height = 10.21)
+
+plot_grid(
+  MSIGDB_plot,
+  miRNA_plot,
+  TF_plot,
+  plot_grid(
+    Pathway_plot,
+    empty_plot,
+    ncol = 1,
+    rel_heights = c(0.75, 0.25) 
+  ),
+  ncol = 4,
+  rel_widths = c(0.7,0.35,0.35,0.4)
+)
+
+dev.off()
+```
+

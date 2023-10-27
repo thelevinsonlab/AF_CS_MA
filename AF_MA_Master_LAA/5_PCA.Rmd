@@ -1,0 +1,282 @@
+---
+title: "5_PCA"
+output:
+  word_document: default
+  html_document: default
+date: "2023-02-26"
+---
+# 1. Loading Packages and Functions
+
+```{r}
+library(pwr)
+library(PLIER)
+library(Rtsne)
+library(vctrs)
+library(sjstats)
+library(dplyr)
+library(tidyverse)
+library(cowplot)
+library(rlang)
+
+source("src/utils_AF_Meta.R")
+```
+
+# 2. Data Import
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+# 3. Data Preprocessing
+```{r}
+# Here we prepare a gene expression matrix from the data and differentiate between "RNA-Seq" and "microarray" tech types.
+meta_targets = get_tibble_union(AF_Meta,"TARGETS") %>%
+  dplyr::select(sample, condition, ExpID) %>% 
+  mutate(grl_id = paste(sample, ExpID,sep = "_"))
+
+
+# A single gene expression matrix with all samples
+meta_gex = get_complete_gex_AF(meta_list = AF_Meta,
+                            complete_targets = meta_targets,
+                            gex_key = "GEX")
+
+meta_targets = meta_targets %>% mutate(Tech = case_when(ExpID == "Hsu_2018" | ExpID == "Thomas_2019" | ExpID == "Sun_2021" | ExpID == "Herrera_Rivero_2022" | ExpID == "Santos_2020" | ExpID == "Zhu_2020"  ~ "RNA-Seq", TRUE ~ "microarray"))
+```
+
+# 4. PCA of all data (complete genes)
+```{r}
+# Principal Component Analysis (PCA) on the data after omitting NA rows.
+
+meta_gex_naomit = meta_gex[rowSums(is.na(meta_gex))==0,]
+dim(meta_gex_naomit)
+pca_meta = prcomp(t(meta_gex_naomit[,meta_targets$grl_id]),center = T,scale. = T)
+pca_meta_sum = summary(pca_meta) #This is the object to plot
+
+pca_meta_sum[["plot_df"]] = meta_targets %>% mutate("PC1" = pca_meta$x[,1],
+                                                     "PC2" = pca_meta$x[,2])
+
+# We save the PCA results into an RDS file.
+saveRDS(pca_meta_sum, file = "data/figure_objects/pca_meta_summary.rds")
+```
+
+# 5. Matrix of z-scores + PCA
+```{r}
+# Here we transform the original gene expression matrix to a matrix of z-scores, where the values are standardized by the mean and standard deviation of the SR "healthy" samples. Then this new matrix will be subjected to PCA, and the results  saved into an RDS file.
+
+AF_Meta = lapply(AF_Meta, function(x){
+  
+  targets = x[["TARGETS"]]
+  gex = x[["GEX"]]
+  
+  af_gex = gex[,(targets %>% 
+                 dplyr::filter(condition == "AF"))$sample]
+
+  healthy_gex = gex[,(targets %>% 
+                   dplyr::filter(condition == "SR"))$sample]
+  
+  ref_mean = rowMeans(healthy_gex, na.rm = TRUE)
+  
+  ref_sd = sqrt(rowSums((healthy_gex - ref_mean)^2) / (ncol(healthy_gex) - 1))
+  
+  x[["Zmat"]] = (af_gex - ref_mean)/ref_sd
+  
+  return(x)
+  
+})
+
+
+z_targets = meta_targets %>% filter(condition == "AF")
+
+meta_gex_z = get_complete_gex_AF(meta_list = AF_Meta,
+                            complete_targets = z_targets,
+                            gex_key = "Zmat")
+
+meta_gex_z_naomit = meta_gex_z[rowSums(is.na(meta_gex_z))==0,]
+
+trans <- t(meta_gex_z_naomit[,z_targets$grl_id])
+
+trans_removed <- trans[ , which(apply(trans, 2, var) != 0)]
+
+pca_meta_z = prcomp(trans_removed,center = T,scale. = T)
+
+pca_meta_z_sum = summary(pca_meta_z) #This is the object to plot
+
+pca_meta_z_sum[["plot_df"]] = z_targets %>% mutate("PC1" = pca_meta_z$x[,1],
+                                                     "PC2" = pca_meta_z$x[,2])
+
+saveRDS(pca_meta_z_sum, file = "data/figure_objects/pca_meta_summary_z.rds")
+```
+
+# 6. Fitting linear models to each PC of z-transformed AF samples
+```{r}
+# Linear model to explore associations between study origin.
+
+pcs_study = run_anovastats_single(numeric_matrix = t(pca_meta_z_sum$x),
+                                  targets = z_targets,
+                                  factor_a = "ExpID",
+                                  pval = 0.05)
+
+# Map to proportion explained
+
+pcs_study = mutate(pcs_study,
+                   prop_var = pca_meta_z_sum$importance[2,pcs_study$PC]) %>%
+  dplyr::arrange(desc(prop_var)) %>% 
+  dplyr::select(PC, factor_a_vect, prop_var) %>% 
+  dplyr::mutate(factor_a_vect = as.character(factor_a_vect))
+
+total_row = c("TOTAL","",sum(pcs_study$prop_var))
+pcs_study = pcs_study %>% mutate(prop_var = as.character(prop_var))
+names(total_row) = colnames(pcs_study) = c("PCs","p_value","Prop. Var")
+
+pcs_study = bind_rows(pcs_study, total_row)
+
+print(pcs_study,n=100)
+```
+```{r}
+# Linear model to explore associations between study technology.
+pcs_tech = run_anovastats_single(numeric_matrix = t(pca_meta_z_sum$x),
+                                  targets = z_targets,
+                                  factor_a = "Tech",
+                                  pval = 0.05)
+
+# Map to proportion explained
+pcs_tech = mutate(pcs_tech,
+                   prop_var = pca_meta_z_sum$importance[2,pcs_tech$PC]) %>%
+  dplyr::arrange(desc(prop_var)) %>% 
+  dplyr::select(PC, factor_a_vect, prop_var) %>% 
+  dplyr::mutate(factor_a_vect = as.character(factor_a_vect))
+
+total_row = c("TOTAL","",sum(pcs_tech$prop_var))
+pcs_tech = pcs_tech %>% mutate(prop_var = as.character(prop_var))
+names(total_row) = colnames(pcs_tech) = c("PCs","p_value","Prop. Var")
+
+pcs_tech = bind_rows(pcs_tech, total_row)
+
+print(pcs_tech,n=100)
+```
+
+# 7. t-SNE of z-transformed data
+```{r}
+# Finally, we will perform t-distributed Stochastic Neighbor Embedding (t-SNE), which is a machine learning algorithm for visualization, on the z-transformed data.
+
+set.seed(9)  
+
+meta_gex_z_naomit_inf <- meta_gex_z_naomit
+
+meta_gex_z_naomit_inf[sapply(meta_gex_z_naomit_inf, simplify = 'matrix', is.infinite)] <- 0
+
+meta_gex_z_naomit_inf = meta_gex_z_naomit_inf[rowSums(is.na(meta_gex_z_naomit_inf))==0,]
+
+nrow(meta_gex_z_naomit_inf)
+
+tsne_model = Rtsne(t(meta_gex_z_naomit_inf[,z_targets$grl_id]),
+                     pca=TRUE, dims=2, perplexity = 15)
+
+# getting the two dimension matrix
+d_tsne = as.data.frame(tsne_model$Y) 
+
+tsne_plotdf = z_targets %>% mutate("tSNE1" = d_tsne[,1],
+                                   "tSNE2" = d_tsne[,2])
+
+saveRDS(tsne_plotdf, file = "data/figure_objects/tsne_z.rds")
+```
+
+# Creating the plots
+```{r}
+# 1st panel
+
+pca_plot_df = pca_meta_sum$plot_df
+
+pca_plot = ggplot(pca_plot_df, aes(x = PC1, y=PC2, 
+                                   color = ExpID, shape = Tech)) + 
+  geom_point() + theme_minimal() +
+  theme(axis.title = element_text(size =12),
+        axis.text= element_text(size =12),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill=NULL, colour='black',
+                                      size=1))+
+  xlab(paste("PC1",
+             as.character(round(pca_meta_sum$importance[2,1] *100)),
+             "%")) +
+  ylab(paste("PC2",
+             as.character(round(pca_meta_sum$importance[2,2] *100)),
+             "%"))
+```
+
+```{r}
+# 2nd panel
+
+pca_meta_sum_z = readRDS(file = "data/figure_objects/pca_meta_summary_z.rds")
+
+pca_plot_df = pca_meta_sum_z$plot_df
+
+pca_plot_z = ggplot(pca_plot_df, aes(x = PC1, y=PC2, 
+                                   color = ExpID, shape = Tech)) + 
+  geom_point() + theme_minimal() +
+  theme(axis.title = element_text(size =12),
+        axis.text= element_text(size =12),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill=NULL, colour='black',
+                                        size=1))+
+  xlab(paste("PC1",
+             as.character(round(pca_meta_sum_z$importance[2,1] *100)),
+             "%")) +
+  ylab(paste("PC2",
+             as.character(round(pca_meta_sum_z$importance[2,2] *100)),
+             "%"))
+
+```
+
+# 3rd panel
+```{r}
+tsne_plotdf = readRDS(file = "data/figure_objects/tsne_z.rds")
+
+tsne_plot_z = ggplot(tsne_plotdf %>% 
+                       dplyr::mutate(Study = ExpID),
+                     aes(x = tSNE1, y=tSNE2, 
+                                     color = Study, shape = Tech)) + 
+  geom_point() + theme_minimal() +
+  theme(axis.title = element_text(size =12),
+        axis.text= element_text(size =12),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill=NULL, colour='black',
+                                        size=1))+
+  xlab("Dimension 1") +
+  ylab("Dimension 2")
+
+# Complete figure
+
+all_legend = get_legend(tsne_plot_z)
+
+pca_plot = pca_plot + theme(legend.position = "none")
+pca_plot_z = pca_plot_z + theme(legend.position = "none")
+tsne_plot_z = tsne_plot_z + theme(legend.position = "none")
+
+all_panels =plot_grid(pca_plot, pca_plot_z, tsne_plot_z,
+            align = "h",
+            nrow = 2,
+            rel_widths = c(1,1,1),labels = c("A","B","C")
+            )
+
+final_plot = plot_grid(all_panels, all_legend, nrow = 1,
+          rel_widths = c(1,.2))
+
+# TO DO: define size to export
+
+pdf("data/figures/sup/SupplementalFigure7.pdf",
+    width = 10,
+    height = 8)
+plot(final_plot)
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+

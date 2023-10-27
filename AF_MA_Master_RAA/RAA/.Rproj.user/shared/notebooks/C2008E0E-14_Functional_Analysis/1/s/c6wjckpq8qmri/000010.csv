@@ -1,0 +1,5 @@
+"0","# Prepare the matrix for Univariate Linear Model (ULM) from the gene rank data"
+"0",""
+"0","CS_rank <- RAA_gene_rank %>% column_to_rownames(""gene"") %>%"
+"0","  dplyr::select(mean_lfc, mean_t, fisher_pvalue) %>% "
+"0","  filter(!is.na(mean_t)) %>% as.matrix()"

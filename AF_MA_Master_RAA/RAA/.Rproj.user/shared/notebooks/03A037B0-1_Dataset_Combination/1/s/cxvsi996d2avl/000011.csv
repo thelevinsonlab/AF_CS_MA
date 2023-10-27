@@ -1,0 +1,6 @@
+"0","experiments = names(AF_Meta)"
+"0",""
+"0","pdf(file = ""data_processing/complementary_files/boxplotsMETA.pdf"",width = 28, height = 8)"
+"0","for(x in experiments){"
+"0","  boxplot(AF_Meta[[x]]$GEX, main=x)"
+"0","}"

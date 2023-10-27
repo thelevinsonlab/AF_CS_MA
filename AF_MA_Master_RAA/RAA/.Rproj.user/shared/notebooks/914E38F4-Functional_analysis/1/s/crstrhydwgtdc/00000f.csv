@@ -1,0 +1,3 @@
+"0","l <- LAA_DE_genes$gene"
+"0","resCERNO <- tmodCERNOtest(l)"
+"0","head(resCERNO)"

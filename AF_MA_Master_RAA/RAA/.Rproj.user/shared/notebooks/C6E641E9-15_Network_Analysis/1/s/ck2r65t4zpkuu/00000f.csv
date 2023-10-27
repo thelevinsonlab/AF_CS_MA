@@ -1,0 +1,6 @@
+"0","CTD_Results_RAA$Interaction_Type <- ifelse(grepl(""increases\\^expression"", CTD_Results_RAA$`Specific Interaction Actions`), ""Increase"", ifelse(grepl(""decreases\\^expression"", CTD_Results_RAA$`Specific Interaction Actions`), ""Decrease"", NA))"
+"0",""
+"0",""
+"0",""
+"0","# Creating a wide data frame"
+"0","CTD_Results_RAA_wide <- dcast(CTD_Results_RAA, `Chemical Name` ~ `Gene Symbol`, value.var = ""Interaction_Type"", fun.aggregate = function(x) paste(unique(x), collapse = "",""))"

@@ -1,0 +1,7 @@
+"0","table_two <- tableby(muerte ~ sexo + hta +	dm +	erc +	htp +	infarto +	acv +	tabaquismo +	alcohol +	hipotiroidismo +	cancer +	peso +	talla +	imc +	etiologia +	dispositivos +	causa_implante +	dispositivo +	intermacs +	uci_dias +	hosp_dias +	falla_derecha +	transfusion +	reintervencion +	infeccion_device +	acv_isquemico + 	acv_hemorragico +	trombosis_bomba +	torcion_outflow +	hosp_falla +	num_hosp_falla +	hosp_otros +	causa_hosp_otros +	trasplante +	causa_trasplante +	muerte +	causa_muerte + seguimiento_dias,
+  data = data,
+  control = my_controls
+)
+"
+"2","Error in eval(predvars, data, env) : object 'seguimiento_dias' not found
+"

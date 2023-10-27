@@ -1,0 +1,55 @@
+---
+title: "12_Concordance_Interchamber"
+output: html_document
+date: "2023-08-07"
+---
+
+```{r}
+library(readxl)
+library(dplyr)
+library(RRHO2)
+```
+
+
+```{r}
+LAA_DE_genes <- read_excel("~/PhD Heidelberg/Projects/AF_MA_Master_LAA/SupplementalTable2.xlsx")
+RAA_DE_genes <- read_excel("~/PhD Heidelberg/Projects/AF_MA_Master_RAA/SupplementalTable2.xlsx")
+```
+
+
+```{r}
+LAA_DE_genes$DDE <- -log10(LAA_DE_genes$fisher_pvalue) * sign(LAA_DE_genes$mean_lfc)
+RAA_DE_genes$DDE <- -log10(RAA_DE_genes$fisher_pvalue) * sign(RAA_DE_genes$mean_lfc)
+
+
+LAA_DE_genes <- LAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)
+LAA_DE_genes <- LAA_DE_genes[!duplicated(LAA_DE_genes$Genes), ]
+
+RAA_DE_genes <- RAA_DE_genes %>% select(c(gene, DDE)) %>% rename(Genes = gene)
+RAA_DE_genes <- RAA_DE_genes[!duplicated(RAA_DE_genes$Genes), ]
+```
+
+```{r}
+# Identify common genes
+common_genes <- intersect(LAA_DE_genes$Genes, RAA_DE_genes$Genes)
+
+# Filter dataframes to keep only common genes
+LAA_DE_common <- LAA_DE_genes[LAA_DE_genes$Genes %in% common_genes, ]
+RAA_DE_common <- RAA_DE_genes[RAA_DE_genes$Genes %in% common_genes, ]
+
+# Sort both dataframes based on the 'Genes' column
+LAA_DE_common <- LAA_DE_common[order(LAA_DE_common$DDE), ]
+RAA_DE_common <- RAA_DE_common[order(RAA_DE_common$DDE), ]
+
+LAA_DE_common <- as.data.frame(LAA_DE_common)
+RAA_DE_common <- as.data.frame(RAA_DE_common)
+```
+
+```{r}
+RRHO_obj <- RRHO2_initialize(LAA_DE_common, RAA_DE_common, labels = c("LAA AF-CS Gene Rank", "RAA AF-CS Gene Rank"), log10.ind=TRUE)
+
+
+pdf("data/figures/sup/SupplementalFigure14.pdf", width = 14, height = 10)
+RRHO2_heatmap(RRHO_obj)
+dev.off()
+```

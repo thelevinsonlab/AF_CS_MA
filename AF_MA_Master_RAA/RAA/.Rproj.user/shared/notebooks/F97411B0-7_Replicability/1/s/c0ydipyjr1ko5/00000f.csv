@@ -1,0 +1,4 @@
+"0","# In this section, we will apply the multiple functions for the application of transfer learning and calculation of disease scores as a classifier."
+"0",""
+"0","t_matrix = get_all_limma_AF(meta_list = AF_Meta,"
+"0","                         limma_column = ""t"")"

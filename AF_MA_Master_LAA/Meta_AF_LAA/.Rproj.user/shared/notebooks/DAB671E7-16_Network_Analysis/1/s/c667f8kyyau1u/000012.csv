@@ -1,0 +1,30 @@
+"0","chemicals_of_interest <- c(""Acetaminophen"", ""Calcitriol"", ""Clofibrate"", ""Estradiol"", ""Folic Acid"", ""pirinixic acid"", ""Pravastatin"", ""Resveratrol"", ""Tretinoin"", ""Valproic Acid"")"
+"0",""
+"0","subset_data <- CTD_Results_LAA_wide[CTD_Results_LAA_wide$`Chemical Name` %in% chemicals_of_interest, ]"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"2","Error in assign(cacheKey, frame, .rs.CachedDataEnv) : 
+  attempt to use zero-length variable name
+"
+"0","# Replace empty strings with 0"
+"0","subset_data[subset_data == """"] <- 0"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"2","Error in assign(cacheKey, frame, .rs.CachedDataEnv) : 
+  attempt to use zero-length variable name
+"
+"0","# Replace all remaining non-zero values with 1"
+"0","subset_data[, -1] <- ifelse(subset_data[, -1] != 0, 1, 0)"
+"2","Error in exists(cacheKey, where = .rs.WorkingDataEnv, inherits = FALSE) : 
+  invalid first argument
+"
+"2","Error in assign(cacheKey, frame, .rs.CachedDataEnv) : 
+  attempt to use zero-length variable name
+"
+"0","# Convert to Long Format"
+"0","subset_data_long <- subset_data %>%"
+"0","  pivot_longer(cols = -`Chemical Name`, names_to = ""Gene"", values_to = ""Value"")"
+"0",""
+"0","write.csv(subset_data_long, file=""~/PhD Heidelberg/Projects/AF_MA_Master_LAA/drug_targets_result_LAA.csv"")"

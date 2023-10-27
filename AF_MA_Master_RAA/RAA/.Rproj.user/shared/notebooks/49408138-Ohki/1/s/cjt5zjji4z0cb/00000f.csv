@@ -1,0 +1,5 @@
+"0","#Targets creation"
+"0",""
+"0","Ohki_targets <- read.delim(""~/PhD Heidelberg/Projects/AF_MA_Master_RAA/data_processing/scripts/Ohki/metadata.txt"")"
+"0",""
+"0","save(Ohki_targets, file = ""./Ohki_targets.ro"")"

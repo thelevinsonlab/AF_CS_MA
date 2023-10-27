@@ -1,0 +1,6 @@
+"0","library(msigdbr)"
+"0","msig <- msigdbr()"
+"0","msig <- makeTmodFromDataFrame(df = msig, feature_col = ""gene_symbol"", module_col = ""gs_id"", title_col = ""gs_name"","
+"0","    extra_module_cols = c(""gs_cat"", ""gs_subcat"", ""gs_url"", ""gs_exact_source"", ""gs_description""))"
+"2","making Tmod
+"

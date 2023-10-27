@@ -1,0 +1,98 @@
+---
+title: "11_LOO"
+output: html_document
+date: "2023-08-06"
+---
+
+```{r}
+library(ggplot2)
+
+source("src/utils_AF_Meta.R")
+```
+
+```{r}
+AF_Meta = readRDS(file = "data/AF_Meta.rds") #main object
+```
+
+```{r}
+fisher_rank = run_fisher_meta_AF(meta_list = AF_Meta,
+                              n_missing = length(AF_Meta) - 5)
+
+fisher_rank<- p.adjust(fisher_rank, method = "BH")
+```
+
+
+```{r}
+# Assuming AF_Meta is your meta-data list where each item is a different study
+
+# Initialize lists to store the LOO results
+loo_results <- list()
+
+# Loop through each study
+for (study_name in names(AF_Meta)) {
+  
+  # Create a temporary list excluding the current study
+  tmp_meta_list <- AF_Meta[!(names(AF_Meta) %in% study_name)]
+  
+  # Run the meta-analysis on the temporary list
+  tmp_fisher_rank <- run_fisher_meta_AF(meta_list = tmp_meta_list, n_missing = length(tmp_meta_list) - 5)
+  
+  # Store the results in the loo_results list
+  loo_results[[study_name]] <- tmp_fisher_rank
+}
+
+# At this point, loo_results contains the meta-analysis results for each LOO iteration
+
+# To compare the results, you can, for instance, compute the rank correlation 
+# between the full meta-analysis results and each LOO result:
+
+cor_results <- list()
+
+for (study_name in names(loo_results)) {
+  
+  # Get the common genes between full result and the leave-one-out result
+  common_genes <- intersect(names(fisher_rank), names(loo_results[[study_name]]))
+  
+  # Subset both results to only these genes
+  full_subset <- fisher_rank[common_genes]
+  loo_subset <- loo_results[[study_name]][common_genes]
+  
+  # Now compute the Spearman rank correlation
+  cor_results[[study_name]] <- cor(full_subset, loo_subset, method="spearman")
+}
+
+# This gives you the Spearman rank correlation between the full results 
+# and the results obtained after excluding each study. 
+# Values close to 1 indicate that the excluded study did not have a strong influence on the results.
+
+```
+
+# 3. Creating the plot
+```{r}
+# Convert the list to a data frame
+cor_df <- data.frame(Study = names(cor_results),
+                     Correlation = unlist(cor_results))
+
+# Create a bar plot with adjusted y-axis limits
+bar_leave_one_out <- ggplot(cor_df, aes(x = reorder(Study, -Correlation), y = Correlation)) +
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  geom_text(aes(label = sprintf("%.3f", Correlation)), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(0.5, 1)) +  # Adjusted y-axis limits
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(face = "bold")) +
+  labs(y = "Spearman Correlation", 
+       title = "A",
+       subtitle = "")
+```
+
+```{r}
+pdf("data/figures/sup/SupplementalFigure13.pdf",
+    width = 10,
+    height = 4.5)
+
+bar_leave_one_out
+
+dev.off()
+```

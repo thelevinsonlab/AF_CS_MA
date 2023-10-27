@@ -1,0 +1,94 @@
+"","Chemical Name","Gene","Value"
+"1","Acetaminophen","BMP7",1
+"2","Acetaminophen","CACNA1D",1
+"3","Acetaminophen","CACNB2",1
+"4","Acetaminophen","CHL1",1
+"5","Acetaminophen","FBN2",1
+"6","Acetaminophen","FGF1",1
+"7","Acetaminophen","HSPA2",1
+"8","Acetaminophen","KCND3",1
+"9","Acetaminophen","PLP1",1
+"10","Acetaminophen","RPS6KA5",1
+"11","Acetaminophen","TGFBR2",1
+"12","Acetaminophen","TNNI3",1
+"13","Acetaminophen","TNNT1",1
+"14","Acetylcysteine","BMP7",1
+"15","Acetylcysteine","FGF7",1
+"16","Acetylcysteine","TGFBR2",1
+"17","Ascorbic Acid","BMP7",1
+"18","Ascorbic Acid","FGF1",1
+"19","Ascorbic Acid","FGF7",1
+"20","Calcitriol","BMP7",1
+"21","Calcitriol","KCND3",1
+"22","Calcitriol","RPS6KA5",1
+"23","Calcitriol","TGFBR2",1
+"24","Calcitriol","TNNT1",1
+"25","Curcumin","TGFBR2",1
+"26","Curcumin","TNNI3",1
+"27","Estradiol","BMP7",1
+"28","Estradiol","CACNA1D",1
+"29","Estradiol","CACNB2",1
+"30","Estradiol","FBN2",1
+"31","Estradiol","FGF1",1
+"32","Estradiol","FGF7",1
+"33","Estradiol","HSPA2",1
+"34","Estradiol","KCND3",1
+"35","Estradiol","PLP1",1
+"36","Estradiol","RPS6KA5",1
+"37","Estradiol","TGFBR2",1
+"38","Estradiol","TNNT1",1
+"39","Fenretinide","BMP7",1
+"40","Fenretinide","FGF1",1
+"41","Fenretinide","HSPA2",1
+"42","Fenretinide","KCND3",1
+"43","Fenretinide","PLP1",1
+"44","Fenretinide","RPS6KA5",1
+"45","Folic Acid","BMP7",1
+"46","Folic Acid","CACNA1D",1
+"47","Folic Acid","CACNB2",1
+"48","Folic Acid","CHL1",1
+"49","Folic Acid","FBN2",1
+"50","Folic Acid","HSPA2",1
+"51","Folic Acid","RPS6KA5",1
+"52","Folic Acid","TGFBR2",1
+"53","Genistein","BMP7",1
+"54","Genistein","CACNB2",1
+"55","Genistein","FBN2",1
+"56","Genistein","FGF1",1
+"57","Genistein","HSPA2",1
+"58","Genistein","KCND3",1
+"59","Genistein","PLP1",1
+"60","Genistein","TGFBR2",1
+"61","Genistein","TNNT1",1
+"62","pirinixic acid","CACNA1D",1
+"63","pirinixic acid","CHL1",1
+"64","pirinixic acid","FGF1",1
+"65","pirinixic acid","HSPA2",1
+"66","pirinixic acid","RPS6KA5",1
+"67","pirinixic acid","TGFBR2",1
+"68","pirinixic acid","TNNT1",1
+"69","Progesterone","BMP7",1
+"70","Progesterone","CACNA1D",1
+"71","Progesterone","FBN2",1
+"72","Progesterone","KCND3",1
+"73","Progesterone","PLP1",1
+"74","Progesterone","RPS6KA5",1
+"75","Progesterone","TGFBR2",1
+"76","Progesterone","TNNI3",1
+"77","Resveratrol","BMP7",1
+"78","Resveratrol","FGF1",1
+"79","Resveratrol","FGF7",1
+"80","Resveratrol","TGFBR2",1
+"81","Valproic Acid","BMP7",1
+"82","Valproic Acid","CACNA1D",1
+"83","Valproic Acid","CHL1",1
+"84","Valproic Acid","FBN2",1
+"85","Valproic Acid","FGF1",1
+"86","Valproic Acid","FGF7",1
+"87","Valproic Acid","HSPA2",1
+"88","Valproic Acid","KCND3",1
+"89","Valproic Acid","PLP1",1
+"90","Valproic Acid","RPS6KA5",1
+"91","Valproic Acid","TGFBR2",1
+"92","Valproic Acid","TNNI3",1
+"93","Valproic Acid","TNNT1",1
